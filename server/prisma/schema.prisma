@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  fullName  String
+  position  String
+  role      String   @default("user") // "admin" | "user"
+  status    String   @default("active") // "active" | "disabled" | "deleted"
+  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  
+  letters      Letter[]
+  
+  mustChangePasswordOnNextLogin Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      String   @default("active") // "active" | "archived" | "deleted"
+  
+  users       User[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model Index {
+  id        String   @id @default(uuid())
+  code      String   @unique // "01-01"
+  name      String
+  status    String   @default("active") // "active" | "archived" | "deleted"
+  
+  letters   Letter[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model Letter {
+  id           String   @id @default(uuid())
+  letterNumber String   // Auto-generated e.g. "01-01/123"
+  letterDate   String   // YYYY-MM-DD
+  
+  indexId      String
+  index        Index    @relation(fields: [indexId], references: [id])
+  
+  recipient    String
+  subject      String
+  content      String? // Summary/Content
+  pageCount    Int
+  attachmentPageCount Int
+  
+  status       String   @default("DRAFT") // "DRAFT" | "REGISTERED"
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  files        File[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model File {
+  id        String   @id @default(uuid())
+  kind      String   // "XAT" | "ILOVA"
+  fileName  String
+  mimeType  String
+  size      Int
+  path      String   // Path on disk
+  
+  letterId  String
+  letter    Letter   @relation(fields: [letterId], references: [id])
+  
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+server/uploads/*
+!server/uploads/.gitkeep
+npm-debug.log
+yarn-error.log
