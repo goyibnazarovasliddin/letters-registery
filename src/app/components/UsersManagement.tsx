@@ -69,6 +69,7 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
   const [showCreateModal, setShowCreateModal] = useState(initialAction === 'create');
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [copiedField, setCopiedField] = useState<'username' | 'password' | null>(null);
@@ -77,6 +78,10 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
   const [fish, setFish] = useState('');
   const [lavozimi, setLavozimi] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.fish.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -93,6 +98,9 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / limit);
+  const paginatedUsers = filteredUsers.slice((page - 1) * limit, page * limit);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +141,11 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
   const openDeleteDialog = (user: User) => {
     setSelectedUser(user);
     setShowDeleteDialog(true);
+  };
+
+  const confirmResetPassword = (user: User) => {
+    setSelectedUser(user);
+    setShowResetDialog(true);
   };
 
   const handleDeleteUser = () => {
@@ -189,41 +202,62 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row gap-4 items-end">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             placeholder="F.I.Sh., lavozim yoki login bo'yicha qidirish..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-sm text-gray-500 whitespace-nowrap">Soni:</span>
+            <div className="w-[80px]">
+              <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Soni" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <Button
             variant={statusFilter === 'all' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('all')}
+            onClick={() => { setStatusFilter('all'); setPage(1); }}
             size="sm"
           >
             Barchasi
           </Button>
           <Button
             variant={statusFilter === 'active' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('active')}
+            onClick={() => { setStatusFilter('active'); setPage(1); }}
             size="sm"
           >
             Faol
           </Button>
           <Button
             variant={statusFilter === 'disabled' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('disabled')}
+            onClick={() => { setStatusFilter('disabled'); setPage(1); }}
             size="sm"
           >
             O'chirilgan
           </Button>
           <Button
             variant={statusFilter === 'deleted' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('deleted')}
+            onClick={() => { setStatusFilter('deleted'); setPage(1); }}
             size="sm"
             className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-200' : ''}
           >
@@ -238,6 +272,7 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">№</TableHead>
               <TableHead>F.I.Sh.</TableHead>
               <TableHead>Lavozimi</TableHead>
               <TableHead>Bo'lim</TableHead>
@@ -248,15 +283,18 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   {statusFilter === 'deleted' ? 'Savatcha bo\'sh' : 'Foydalanuvchilar topilmadi'}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
+              paginatedUsers.map((user, index) => (
                 <TableRow key={user.id}>
+                  <TableCell className="text-center text-gray-500">
+                    {index + 1 + (page - 1) * limit}
+                  </TableCell>
                   <TableCell className="font-medium">{user.fish}</TableCell>
                   <TableCell>{user.lavozimi}</TableCell>
                   <TableCell className="text-gray-500">{user.department || '—'}</TableCell>
@@ -283,7 +321,9 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-500">{user.createdDate}</TableCell>
+                  <TableCell className="text-gray-500">
+                    {new Date(user.createdDate).toLocaleDateString('ru-RU')} {new Date(user.createdDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -313,7 +353,7 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
                           </>
                         ) : (
                           <>
-                            <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.username)}>
+                            <DropdownMenuItem onClick={() => confirmResetPassword(user)}>
                               <KeyRound className="w-4 h-4 mr-2" />
                               Parolni yangilash
                             </DropdownMenuItem>
@@ -347,6 +387,27 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination Controls */}
+        <div className="p-4 border-t flex items-center justify-between">
+          <Button
+            variant="ghost"
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+          >
+            Oldingi
+          </Button>
+          <span className="text-sm text-gray-500">
+            Sahifa {page} / {totalPages || 1}
+          </span>
+          <Button
+            variant="ghost"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Keyingi
+          </Button>
+        </div>
       </div>
 
       {/* Create User Modal */}
@@ -429,6 +490,40 @@ export function UsersManagement({ initialAction }: UsersManagementProps) {
             <AlertDialogCancel onClick={() => setSelectedUser(null)}>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
               O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Password Reset Confirmation Dialog */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-yellow-600">
+              <TriangleAlert className="w-5 h-5" />
+              Parolni yangilashni tasdiqlang
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 pt-2">
+              <p>
+                Siz haqiqatdan ham <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedUser?.fish}</span> parolini yangilamoqchimisiz?
+              </p>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm">
+                ⚠️ Diqqat! Yangilagandan so'ng foydalanuvchi tizimdan chiqarib yuboriladi va yangi parol bilan qayta kirishi kerak bo'ladi.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedUser(null)}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedUser) {
+                  handleResetPassword(selectedUser.id, selectedUser.username);
+                  setShowResetDialog(false);
+                }
+              }}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              Tasdiqlash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

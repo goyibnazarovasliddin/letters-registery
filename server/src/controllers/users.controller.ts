@@ -6,6 +6,9 @@ import { z } from 'zod';
 export const listUsers = async (req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
+            where: {
+                role: { not: 'admin' }
+            },
             // Return all users so frontend can filter
             include: {
                 department: true
@@ -84,6 +87,7 @@ export const updateUser = async (req: Request, res: Response) => {
         const updateData: any = { ...data };
         if (password && password.length >= 6) {
             updateData.password = await bcrypt.hash(password, 10);
+            updateData.tokenVersion = { increment: 1 };
         }
 
         const updatedUser = await prisma.user.update({
@@ -154,7 +158,8 @@ export const resetPassword = async (req: Request, res: Response) => {
             where: { id },
             data: {
                 password: hashedPassword,
-                mustChangePasswordOnNextLogin: true
+                mustChangePasswordOnNextLogin: true,
+                tokenVersion: { increment: 1 }
             }
         });
 

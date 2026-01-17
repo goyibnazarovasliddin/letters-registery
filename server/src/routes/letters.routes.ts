@@ -13,6 +13,7 @@ const uploadFields = upload.fields([
 
 router.get('/', Controller.listLetters);
 router.post('/', uploadFields, Controller.createLetter);
+router.put('/:id', uploadFields, Controller.updateLetter);
 router.post('/:id/register', Controller.registerLetter);
 router.get('/:id', Controller.getLetter);
 router.get('/files/:id/download', Controller.downloadFile);

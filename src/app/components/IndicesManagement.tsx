@@ -45,6 +45,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 
@@ -67,6 +74,10 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
   const [name, setName] = useState('');
   const [codeError, setCodeError] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   const filteredIndices = indices.filter(index => {
     const matchesSearch = index.code.includes(searchQuery) ||
       index.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -80,6 +91,9 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredIndices.length / limit);
+  const paginatedIndices = filteredIndices.slice((page - 1) * limit, page * limit);
 
   const validateCode = (value: string): boolean => {
     const pattern = /^\d{2}-\d{2}$/;
@@ -174,41 +188,61 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row gap-4 items-end">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             placeholder="Kod yoki nom bo'yicha qidirish..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-sm text-gray-500 whitespace-nowrap">Soni:</span>
+            <div className="w-[80px]">
+              <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Soni" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <Button
             variant={statusFilter === 'all' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('all')}
+            onClick={() => { setStatusFilter('all'); setPage(1); }}
             size="sm"
           >
             Barchasi
           </Button>
           <Button
             variant={statusFilter === 'active' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('active')}
+            onClick={() => { setStatusFilter('active'); setPage(1); }}
             size="sm"
           >
             Faol
           </Button>
           <Button
             variant={statusFilter === 'archived' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('archived')}
+            onClick={() => { setStatusFilter('archived'); setPage(1); }}
             size="sm"
           >
             Arxivlangan
           </Button>
           <Button
             variant={statusFilter === 'deleted' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('deleted')}
+            onClick={() => { setStatusFilter('deleted'); setPage(1); }}
             size="sm"
             className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-200' : ''}
           >
@@ -223,6 +257,7 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12 text-center">№</TableHead>
               <TableHead>Kod</TableHead>
               <TableHead>Nomi</TableHead>
               <TableHead>Status</TableHead>
@@ -230,15 +265,18 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredIndices.length === 0 ? (
+            {paginatedIndices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                   {statusFilter === 'deleted' ? 'Savatcha bo\'sh' : 'Indekslar topilmadi'}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredIndices.map((index) => (
+              paginatedIndices.map((index, idx) => (
                 <TableRow key={index.id}>
+                  <TableCell className="text-center text-gray-500">
+                    {idx + 1 + (page - 1) * limit}
+                  </TableCell>
                   <TableCell className="font-mono font-semibold">{index.code}</TableCell>
                   <TableCell>{index.name}</TableCell>
                   <TableCell>
@@ -314,6 +352,27 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination Controls */}
+        <div className="p-4 border-t flex items-center justify-between">
+          <Button
+            variant="ghost"
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+          >
+            Oldingi
+          </Button>
+          <span className="text-sm text-gray-500">
+            Sahifa {page} / {totalPages || 1}
+          </span>
+          <Button
+            variant="ghost"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Keyingi
+          </Button>
+        </div>
       </div>
 
       {/* Add Index Modal */}

@@ -29,12 +29,14 @@ export interface Index {
 
 export interface Letter {
   id: string;
-  letterNumber: string;
+  letterNumber?: string;
+  letterDate: string;
   indexCode: string;
   indexName: string;
+  status: 'DRAFT' | 'REGISTERED';
   recipient: string;
   subject: string;
-  content: string;
+  summary: string;
   pageCount: number;
   attachmentPageCount: number;
   userFish: string;

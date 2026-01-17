@@ -70,9 +70,12 @@ export function UserProfile() {
                             <h3 className="text-2xl font-bold dark:text-white">{user.fullName}</h3>
                             <p className="text-gray-500 dark:text-gray-400 font-medium">{user.position}</p>
                         </div>
-                        <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-4 py-1">
-                            Faol
-                        </Badge>
+                        <div className="mb-4 flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className={`w-3 h-3 rounded-full ${user.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {user.status === 'active' ? 'Faol' : 'Nofaol'}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t dark:border-gray-700 pt-8">
@@ -87,12 +90,8 @@ export function UserProfile() {
                                     <span className="font-medium dark:text-gray-200">{user.username}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-500 dark:text-gray-400">ID</span>
-                                    <span className="font-medium font-mono text-xs bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">{user.id}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                                     <span className="text-gray-500 dark:text-gray-400">Rol</span>
-                                    <span className="capitalize dark:text-gray-200">{user.role}</span>
+                                    <span className="capitalize dark:text-gray-200">Ijrochi</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                                     <span className="text-gray-500 dark:text-gray-400">Holati</span>

@@ -16,6 +16,7 @@ const INITIAL_USERS: UserDTO[] = [
         fullName: 'Eshmatov Toshmat',
         position: 'Bosh Mutaxassis',
         role: 'user',
+        status: 'active',
         mustChangePasswordOnNextLogin: false,
         settings: {
             allowBackdatedLetters: false
@@ -27,6 +28,7 @@ const INITIAL_USERS: UserDTO[] = [
         fullName: 'Yangi Xodim',
         position: 'Kichik Mutaxassis',
         role: 'user',
+        status: 'active',
         mustChangePasswordOnNextLogin: true, // For testing force change password
         settings: {
             allowBackdatedLetters: true
@@ -37,7 +39,6 @@ const INITIAL_USERS: UserDTO[] = [
 const INITIAL_LETTERS: LetterDTO[] = [
     {
         id: '101',
-        letterNumber: '01-01/123',
         indexId: '1',
         indexCode: '01-01',
         indexName: 'Vazirliklar',
@@ -123,7 +124,6 @@ export const mockGetLetters = async (params: any = {}) => {
     if (params.q) {
         const q = params.q.toLowerCase();
         letters = letters.filter(l =>
-            l.letterNumber.toLowerCase().includes(q) ||
             l.recipient.toLowerCase().includes(q) ||
             l.subject.toLowerCase().includes(q)
         );
@@ -161,7 +161,6 @@ export const mockCreateLetter = async (data: Partial<LetterDTO>): Promise<Letter
 
     const newLetter: LetterDTO = {
         id: Math.random().toString(36).substr(2, 9),
-        letterNumber: data.indexCode + '/' + Math.floor(Math.random() * 1000),
         indexId: data.indexId!,
         indexCode: data.indexCode!,
         indexName: data.indexName!,

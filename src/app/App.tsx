@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { createBrowserRouter, RouterProvider, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import { UserProvider, useUser } from './contexts/UserContext';
@@ -22,6 +22,8 @@ import { LettersList } from './pages/LettersList';
 import { LetterCreate } from './pages/LetterCreate';
 import { LetterDetails } from './pages/LetterDetails';
 import { UserProfile } from './pages/UserProfile';
+import { SettingsPage } from './pages/SettingsPage';
+import { useSearchParams } from 'react-router-dom';
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAdmin();
@@ -39,7 +41,7 @@ function ProtectedUserRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Yuklanmoqda...</div>; // Or a proper spinner
+    return <div className="min-h-screen flex items-center justify-center">Yuklanmoqda...</div>;
   }
 
   if (!isAuthenticated) {
@@ -49,31 +51,15 @@ function ProtectedUserRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-import { useSearchParams } from 'react-router-dom';
-
-function AdminPanel() {
+function AdminLayout() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <AdminHeader />
-      <div className="flex">
+      <div className="flex h-[calc(100vh-4rem)]" style={{ height: 'calc(100vh - 4rem)' }}>
         <AdminSidebar />
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
-            <Routes>
-              <Route index element={<Dashboard />} />
-              <Route path="users" element={<UsersManagementWithParams />} />
-              <Route path="departments" element={<DepartmentsManagementWithParams />} />
-              <Route path="indices" element={<IndicesManagementWithParams />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="letters" element={<LettersRegistry />} />
-              <Route path="audit" element={
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-semibold mb-2">Audit Log</h2>
-                  <p className="text-gray-500">Bu sahifa hozircha ishlab chiqilmoqda</p>
-                </div>
-              } />
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </Routes>
+            <Outlet />
           </div>
         </main>
       </div>
@@ -81,7 +67,6 @@ function AdminPanel() {
   );
 }
 
-// Wrapper components to inject action from URL search params
 function UsersManagementWithParams() {
   const [searchParams] = useSearchParams();
   const action = searchParams.get('action') || undefined;
@@ -100,45 +85,134 @@ function IndicesManagementWithParams() {
   return <IndicesManagement initialAction={action} />;
 }
 
+function RootProviders() {
+  return (
+    <AdminProvider>
+      <UserProvider>
+        <Outlet />
+        <Toaster position="top-right" richColors />
+      </UserProvider>
+    </AdminProvider>
+  );
+}
+
+const router = createBrowserRouter([
+  {
+    element: <RootProviders />,
+    children: [
+      {
+        path: "/login",
+        element: <UserLogin />,
+      },
+      {
+        path: "/force-change-password",
+        element: (
+          <ProtectedUserRoute>
+            <ForceChangePassword />
+          </ProtectedUserRoute>
+        ),
+      },
+      {
+        path: "/",
+        element: (
+          <ProtectedUserRoute>
+            <UserPortal />
+          </ProtectedUserRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <UserDashboard />,
+          },
+          {
+            path: "letters",
+            element: <LettersList />,
+          },
+          {
+            path: "letters/new",
+            element: <LetterCreate />,
+          },
+          {
+            path: "letters/edit/:id",
+            element: <LetterCreate />,
+          },
+          {
+            path: "letters/:id",
+            element: <LetterDetails />,
+          },
+          {
+            path: "profile",
+            element: <UserProfile />,
+          },
+        ],
+      },
+      {
+        path: "/admin/login",
+        element: <AdminLogin />,
+      },
+      {
+        path: "/admin",
+        element: (
+          <ProtectedAdminRoute>
+            <AdminLayout />
+          </ProtectedAdminRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <Dashboard />,
+          },
+          {
+            path: "users",
+            element: <UsersManagementWithParams />,
+          },
+          {
+            path: "departments",
+            element: <DepartmentsManagementWithParams />,
+          },
+          {
+            path: "indices",
+            element: <IndicesManagementWithParams />,
+          },
+          {
+            path: "reports",
+            element: <Reports />,
+          },
+          {
+            path: "letters",
+            element: <LettersRegistry />,
+          },
+          {
+            path: "settings",
+            element: <SettingsPage />,
+          },
+          {
+            path: "audit",
+            element: (
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-semibold mb-2">Audit Log</h2>
+                <p className="text-gray-500">Bu sahifa hozircha ishlab chiqilmoqda</p>
+              </div>
+            ),
+          },
+          {
+            path: "*",
+            element: <Navigate to="/admin" replace />,
+          },
+        ],
+      },
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
+      },
+    ],
+  },
+]);
+
 export default function App() {
   return (
     <ThemeProvider>
-      <AdminProvider>
-        <UserProvider>
-          <Routes>
-            {/* User Routes */}
-            <Route path="/login" element={<UserLogin />} />
-            <Route path="/force-change-password" element={
-              <ProtectedUserRoute>
-                <ForceChangePassword />
-              </ProtectedUserRoute>
-            } />
-            <Route path="/" element={
-              <ProtectedUserRoute>
-                <UserPortal />
-              </ProtectedUserRoute>
-            }>
-              <Route index element={<UserDashboard />} />
-              <Route path="letters" element={<LettersList />} />
-              <Route path="letters/new" element={<LetterCreate />} />
-              <Route path="letters/:id" element={<LetterDetails />} />
-              <Route path="profile" element={<UserProfile />} />
-            </Route>
-
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/*" element={
-              <ProtectedAdminRoute>
-                <AdminPanel />
-              </ProtectedAdminRoute>
-            } />
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster position="top-right" richColors />
-        </UserProvider>
-      </AdminProvider>
+      <RouterProvider router={router} />
     </ThemeProvider>
   );
 }

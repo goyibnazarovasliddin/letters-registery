@@ -7,7 +7,8 @@ import {
   Mail,
   Shield,
   ChevronRight,
-  Building
+  Building,
+  Settings
 } from 'lucide-react';
 import { cn } from './ui/utils';
 
@@ -20,6 +21,7 @@ const menuItems = [
   { id: 'indices', label: 'Indekslar', icon: Hash, path: '/admin/indices' },
   { id: 'reports', label: 'Hisobotlar', icon: FileText, path: '/admin/reports' },
   { id: 'letters', label: 'Xatlar reyestri', icon: Mail, path: '/admin/letters' },
+  { id: 'settings', label: 'Sozlamalar', icon: Settings, path: '/admin/settings' },
   { id: 'audit', label: 'Audit log', icon: Shield, path: '/admin/audit', disabled: true },
 ];
 
@@ -28,7 +30,7 @@ export function AdminSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="w-64 border-r bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] flex-shrink-0">
+    <aside className="w-64 border-r bg-gray-50 dark:bg-gray-900 h-screen overflow-hidden flex-shrink-0">
       <nav className="p-4 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -37,6 +39,9 @@ export function AdminSidebar() {
           return (
             <button
               key={item.id}
+              data-nav="true"
+              data-path={item.path}
+              data-nav-item="true"
               onClick={() => !item.disabled && navigate(item.path)}
               disabled={item.disabled}
               className={cn(

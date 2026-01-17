@@ -2,9 +2,35 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { z } from 'zod';
 
+const formatLetter = (l: any) => {
+    if (!l) return null;
+    return {
+        id: l.id,
+        letterNumber: l.letterNumber,
+        letterDate: l.letterDate,
+        recipient: l.recipient,
+        subject: l.subject,
+        summary: l.content, // mapping db content to summary
+        indexId: l.indexId,
+        indexCode: l.index?.code,
+        indexName: l.index?.name,
+        status: l.status,
+        pageCount: l.pageCount,
+        attachmentPageCount: l.attachmentPageCount,
+        userFish: l.user?.fullName,
+        userPosition: l.user?.position,
+        userId: l.userId,
+        createdDate: l.createdAt.toISOString(),
+        files: {
+            xat: l.files?.find((f: any) => f.kind === 'XAT'),
+            ilova: l.files?.filter((f: any) => f.kind === 'ILOVA') || []
+        }
+    };
+};
+
 export const listLetters = async (req: Request, res: Response) => {
     try {
-        const { status, q, page = 1, limit = 10 } = req.query;
+        const { status, q, page = 1, limit = 10, year } = req.query;
         const pageNum = Number(page);
         const limitNum = Number(limit);
         const skip = (pageNum - 1) * limitNum;
@@ -24,11 +50,24 @@ export const listLetters = async (req: Request, res: Response) => {
         if (status && status !== 'all') {
             where.status = status;
         }
+
+        // Year filter
+        if (year) {
+            // Prisma doesn't have direct Year function in SQLite easily for complex where usually, 
+            // but string comparison works if format is YYYY-MM-DD
+            where.letterDate = {
+                startsWith: String(year)
+            };
+        }
+
         if (q) {
             where.OR = [
                 { letterNumber: { contains: String(q) } },
                 { subject: { contains: String(q) } },
-                { recipient: { contains: String(q) } }
+                { recipient: { contains: String(q) } },
+                { content: { contains: String(q) } },
+                // Search by user name for admin
+                { user: { fullName: { contains: String(q) } } }
             ];
         }
 
@@ -49,13 +88,13 @@ export const listLetters = async (req: Request, res: Response) => {
 
         const formatted = letters.map(l => ({
             id: l.id,
-            letterNumber: l.letterNumber,
+            letterNumber: l.letterNumber, // Return letterNumber
             letterDate: l.letterDate,
             recipient: l.recipient,
             subject: l.subject,
-            content: l.content,
-            indexCode: l.index.code,
-            indexName: l.index.name,
+            summary: l.content, // mapping db content to summary
+            indexCode: l.index?.code,
+            indexName: l.index?.name,
             status: l.status,
             pageCount: l.pageCount,
             attachmentPageCount: l.attachmentPageCount,
@@ -88,8 +127,11 @@ export const createLetter = async (req: Request, res: Response) => {
 
         // Check if user is active
         const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-        if (!dbUser || dbUser.status !== 'active') {
-            return res.status(403).json({ message: 'Hisobingiz faol emas, xat yarata olmaysiz.' });
+        if (!dbUser || dbUser.status === 'deleted') {
+            return res.status(401).json({ message: 'User not found or deleted' });
+        }
+        if (dbUser.status !== 'active') { // Block Create for Inactive
+            return res.status(403).json({ message: 'Hisobingiz faol emas. Xat yarata olmaysiz.' });
         }
 
         // req.body contains text fields, req.files contains files
@@ -97,9 +139,153 @@ export const createLetter = async (req: Request, res: Response) => {
         const { recipient, subject, summary, letterPages, attachmentPages, indexId, letterDate, status } = req.body;
         const userId = user.id;
 
-        // Generate ID
-        const letterNumber = `${Date.now()}`; // Simplified for MVP
+        // Date validation: No future dates allowed
+        const todayStr = new Date().toISOString().split('T')[0];
+        let finalizedDate = letterDate || todayStr;
 
+        if (finalizedDate > todayStr) {
+            return res.status(400).json({ message: 'Kelajak sanasiga xat yozish mumkin emas' });
+        }
+
+        // Check past dates restriction
+        const settings = await prisma.systemSettings.findFirst();
+        const allowPastDates = settings?.allowPastDates ?? false;
+
+        if (!allowPastDates && finalizedDate < todayStr) {
+            finalizedDate = todayStr; // Force today if past dates not allowed
+        }
+
+        const filesData = [];
+        if (req.files) {
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+            // xatFile is now optional
+            if (files['xatFile']) {
+                const f = files['xatFile'][0];
+                filesData.push({
+                    kind: 'XAT',
+                    fileName: f.originalname,
+                    mimeType: f.mimetype,
+                    size: f.size,
+                    path: f.path
+                });
+            }
+
+            if (files['ilovaFiles']) {
+                files['ilovaFiles'].forEach(f => {
+                    filesData.push({
+                        kind: 'ILOVA',
+                        fileName: f.originalname,
+                        mimeType: f.mimetype,
+                        size: f.size,
+                        path: f.path
+                    });
+                });
+            }
+        }
+        const letter = await prisma.letter.create({
+            data: {
+                letterDate: finalizedDate,
+                recipient: recipient || null,
+                subject: subject || null,
+                content: summary,
+                pageCount: Number(letterPages) || 0,
+                attachmentPageCount: Number(attachmentPages) || 0,
+                status: status || 'DRAFT',
+                ...(indexId ? { index: { connect: { id: indexId } } } : {}),
+                user: { connect: { id: userId } },
+                files: {
+                    create: filesData
+                }
+            },
+            include: { index: true }
+        });
+
+        // If status is REGISTERED, generating number immediately
+        if (status === 'REGISTERED') {
+            const result = await prisma.$transaction(async (tx) => {
+                const l = await tx.letter.findUnique({ where: { id: letter.id }, include: { index: true } });
+                if (!l) throw new Error("Letter lost");
+
+                const yearStr = l.letterDate.split('-')[0];
+                const targetYear = parseInt(yearStr, 10);
+
+                const counter = await tx.yearCounter.upsert({
+                    where: { year: targetYear },
+                    update: { lastSequence: { increment: 1 } },
+                    create: { year: targetYear, lastSequence: 1 }
+                });
+
+                const sequence = counter.lastSequence;
+                const letterNumber = `${l.index?.code}/${sequence}`;
+
+                return await tx.letter.update({
+                    where: { id: l.id },
+                    data: { letterNumber },
+                    include: { user: true, index: true, files: true }
+                });
+            });
+            return res.status(201).json(formatLetter(result));
+        }
+
+        const fullLetter = await prisma.letter.findUnique({
+            where: { id: letter.id },
+            include: { index: true, user: true, files: true }
+        });
+
+        res.status(201).json(formatLetter(fullLetter));
+    } catch (e) {
+        console.error(e);
+        res.status(400).json({ message: 'Error creating letter', error: String(e) });
+    }
+};
+
+export const updateLetter = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const user = (req as any).user;
+
+        // Find existing letter
+        const existingLetter = await prisma.letter.findUnique({ where: { id } });
+
+        if (!existingLetter) {
+            return res.status(404).json({ message: 'Xat topilmadi' });
+        }
+
+        // Only owner can update their draft
+        if (user.role !== 'admin' && existingLetter.userId !== user.id) {
+            return res.status(403).json({ message: 'Ruxsat yo\'q' });
+        }
+
+        // Only drafts can be updated
+        if (existingLetter.status !== 'DRAFT') {
+            return res.status(400).json({ message: 'Faqat qoralamalarni tahrirlash mumkin' });
+        }
+
+        const { recipient, subject, summary, letterPages, attachmentPages, indexId, letterDate, status } = req.body;
+
+        // Date validation: No future dates allowed
+        const todayStr = new Date().toISOString().split('T')[0];
+        let finalizedDate = letterDate || existingLetter.letterDate;
+
+        if (finalizedDate > todayStr) {
+            return res.status(400).json({ message: 'Kelajak sanasiga xat yozish mumkin emas' });
+        }
+
+        // Check past dates restriction
+        const settings = await prisma.systemSettings.findFirst();
+        const allowPastDates = settings?.allowPastDates ?? false;
+
+        if (!allowPastDates && finalizedDate < todayStr) {
+            // If updating an existing letter and past dates are NOT allowed, 
+            // but the new date is earlier than today, force it to today.
+            // Note: If the existing letter already had a past date (created when it was allowed), 
+            // we only force today if the user is attempting to CHANGE it to a past date or if we want strict enforcement.
+            // The prompt says "if it is disabled, date must be unchangable and today;s date".
+            finalizedDate = todayStr;
+        }
+
+        // Handle new files if uploaded
         const filesData = [];
         if (req.files) {
             const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -128,54 +314,166 @@ export const createLetter = async (req: Request, res: Response) => {
             }
         }
 
-        const letter = await prisma.letter.create({
+        // Update letter
+        let updated = await prisma.letter.update({
+            where: { id },
             data: {
-                letterNumber, // In real app, generate based on Index
-                letterDate: letterDate || new Date().toISOString().split('T')[0],
-                recipient,
-                subject,
+                letterDate: finalizedDate,
+                recipient: recipient || null,
+                subject: subject || null,
                 content: summary,
-                pageCount: Number(letterPages),
-                attachmentPageCount: Number(attachmentPages),
-                status: status || 'DRAFT',
-                index: { connect: { id: indexId } },
-                user: { connect: { id: userId } },
-                files: {
-                    create: filesData
-                }
+                pageCount: letterPages ? Number(letterPages) : undefined,
+                attachmentPageCount: attachmentPages ? Number(attachmentPages) : undefined,
+                status: status || existingLetter.status,
+                indexId: indexId || null,
+                // Add new files if any
+                ...(filesData.length > 0 && {
+                    files: {
+                        create: filesData
+                    }
+                })
+            },
+            include: {
+                user: true,
+                index: true,
+                files: true
             }
         });
 
-        res.status(201).json(letter);
+        // If status became REGISTERED and no number exists, generate it
+        if (status === 'REGISTERED' && !updated.letterNumber) {
+            const result = await prisma.$transaction(async (tx) => {
+                const l = await tx.letter.findUnique({ where: { id: updated.id }, include: { index: true } });
+                if (!l) throw new Error("Letter lost");
+
+                const yearStr = l.letterDate.split('-')[0];
+                const targetYear = parseInt(yearStr, 10);
+
+                const counter = await tx.yearCounter.upsert({
+                    where: { year: targetYear },
+                    update: { lastSequence: { increment: 1 } },
+                    create: { year: targetYear, lastSequence: 1 }
+                });
+
+                const sequence = counter.lastSequence;
+                const letterNumber = `${l.index?.code}/${sequence}`;
+
+                return await tx.letter.update({
+                    where: { id: l.id },
+                    data: { letterNumber },
+                    include: { user: true, index: true, files: true }
+                });
+            });
+            updated = result as any;
+        }
+
+        res.json(formatLetter(updated));
     } catch (e) {
         console.error(e);
-        res.status(400).json({ message: 'Error creating letter', error: String(e) });
+        res.status(500).json({ message: 'Error updating letter' });
     }
 };
+
 
 export const registerLetter = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const letter = await prisma.letter.findUnique({ where: { id } });
 
-        if (!letter) return res.status(404).json({ message: 'Xat topilmadi' });
+        // Use transaction to ensure atomicity of sequence generation
+        const result = await prisma.$transaction(async (tx) => {
+            const letter = await tx.letter.findUnique({
+                where: { id },
+                include: { index: true } // Need index code
+            });
 
-        // Only owner can register
-        const user = (req as any).user;
-        if (user.role !== 'admin' && letter.userId !== user.id) {
-            return res.status(403).json({ message: 'Ruxsat yo\'q' });
-        }
+            if (!letter) throw new Error('NOT_FOUND');
 
-        const updated = await prisma.letter.update({
-            where: { id },
-            data: { status: 'REGISTERED' }
+            // Only owner can register (or admin)
+            const user = (req as any).user;
+            if (user.role !== 'admin' && letter.userId !== user.id) {
+                throw new Error('FORBIDDEN');
+            }
+
+            // Validate required fields
+            if (!letter.indexId || !letter.index) {
+                throw new Error('MISSING_INDEX');
+            }
+            if (!letter.recipient) {
+                throw new Error('MISSING_RECIPIENT');
+            }
+            if (!letter.subject) {
+                throw new Error('MISSING_SUBJECT');
+            }
+
+            // Prevent double registration
+            if (letter.status === 'REGISTERED') {
+                return letter; // Already registered, just return it
+            }
+
+            // Determine Year from letterDate logic
+            // Requirements: 
+            // - targetYear = year(letterDate)
+            // - letterDate is "YYYY-MM-DD"
+            const yearStr = letter.letterDate.split('-')[0];
+            const targetYear = parseInt(yearStr, 10);
+
+            if (isNaN(targetYear)) {
+                throw new Error('INVALID_DATE');
+            }
+
+            console.log(`[Register] Generating number for Year: ${targetYear}, Index: ${letter.index.code}`);
+
+            // Atomic Sequence Generation
+            // Upsert year counter: if exists, increment; if not, create with 1 (lastSequence will be 1 after increment? No, create with 0 then increment, strictly.)
+            // Actually, usually we want: get current, increment, save.
+            // Using upsert to initialize if missing.
+
+            // We need to lock or ensure atomic update.
+            // SQLite doesn't support SELECT ... FOR UPDATE easily in Prisma without raw query, 
+            // but we can use atomic update: increment.
+
+            const counter = await tx.yearCounter.upsert({
+                where: { year: targetYear },
+                update: { lastSequence: { increment: 1 } },
+                create: { year: targetYear, lastSequence: 1 }
+            });
+
+            const sequence = counter.lastSequence;
+            const letterNumber = `${letter.index.code}/${sequence}`;
+            console.log(`[Register] Generated Sequence: ${sequence}, LetterNumber: ${letterNumber}`);
+
+            // Update letter
+            const updated = await tx.letter.update({
+                where: { id },
+                data: {
+                    status: 'REGISTERED',
+                    letterNumber: letterNumber,
+                    // Ensure createdAt is preserved (it's immutable by default definition but good to know)
+                },
+                include: {
+                    user: true,
+                    index: true,
+                    files: true
+                }
+            });
+
+            return updated;
         });
 
-        res.json(updated);
-    } catch (e) {
+        res.json(formatLetter(result));
+
+    } catch (e: any) {
+        if (e.message === 'NOT_FOUND') return res.status(404).json({ message: 'Xat topilmadi' });
+        if (e.message === 'FORBIDDEN') return res.status(403).json({ message: 'Ruxsat yo\'q' });
+        if (e.message === 'MISSING_INDEX') return res.status(400).json({ message: 'Ro\'yxatga olish uchun indeks tanlanishi shart' });
+        if (e.message === 'MISSING_RECIPIENT') return res.status(400).json({ message: 'Ro\'yxatga olish uchun qabul qiluvchi kiritilishi shart' });
+        if (e.message === 'MISSING_SUBJECT') return res.status(400).json({ message: 'Ro\'yxatga olish uchun mavzu kiritilishi shart' });
+
+        console.error("Register Error:", e);
         res.status(500).json({ message: 'Error registering letter' });
     }
 };
+
 
 export const getLetter = async (req: Request, res: Response) => {
     try {
@@ -196,18 +494,7 @@ export const getLetter = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'Ruxsat yo\'q' });
         }
 
-        res.json({
-            ...letter,
-            userFish: letter.user.fullName,
-            userPosition: letter.user.position,
-            indexCode: letter.index.code,
-            indexName: letter.index.name,
-            // Ensure content is explicitly available if needed, usually ...letter handles it
-            files: {
-                xat: letter.files.find(f => f.kind === 'XAT'),
-                ilova: letter.files.filter(f => f.kind === 'ILOVA')
-            }
-        });
+        res.json(formatLetter(letter));
     } catch (e) {
         res.status(500).json({ message: 'Error fetching letter' });
     }

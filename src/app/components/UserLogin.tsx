@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import agrobankLogo from '../../assets/agrobank-logo.webp';
 import { useUser } from '../contexts/UserContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -49,8 +50,11 @@ export function UserLogin() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border dark:border-gray-700">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Xodimlar uchun kirish</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Iltimos, o'z hisobingizga kiring</p>
+                    <div className="mx-auto w-16 h-16 aspect-square bg-white rounded-xl flex items-center justify-center p-2 shadow-md border mb-4">
+                        <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Markaziy Agrobank</h1>
+                    <p className="text-gray-500 dark:text-gray-400">Xodimlar uchun kirish</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -59,7 +63,6 @@ export function UserLogin() {
                         <Input
                             id="username"
                             type="text"
-                            placeholder="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             required
@@ -73,7 +76,6 @@ export function UserLogin() {
                         <Input
                             id="password"
                             type="password"
-                            placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -134,11 +136,6 @@ export function UserLogin() {
                         {isLoading ? 'Kirilmoqda...' : 'Kirish'}
                     </Button>
                 </form>
-
-                <div className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
-                    <p>Demo: user / user123</p>
-                    <p>Force Change: newuser / user123</p>
-                </div>
             </div>
         </div>
     );

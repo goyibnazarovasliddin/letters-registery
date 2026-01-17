@@ -42,19 +42,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             try {
                 const userData = await api.auth.me();
 
-                // If status changed to non-active or deleted, handle it
-                if (userData.status !== 'active' && user?.status === 'active') {
+                // Sync status if changed (both activation and deactivation)
+                if (user && userData.status !== user.status) {
                     updateUser({ status: userData.status });
+
+                    // If newly activated, show toast? 
+                    if (userData.status === 'active' && user.status !== 'active') {
+                        // Optional: toast.success("Hisobingiz faollashtirildi");
+                    }
                 }
 
-                // If deleted, backend might actually return 403/404 (handled in catch), 
-                // but if it returns 200 with status 'deleted' (unlikely with current auth controller changes), handle it.
                 if (userData.status === 'deleted') {
                     logout();
                 }
 
                 // Auto-logout if password was changed (reset by admin)
-                if (userData.mustChangePasswordOnNextLogin) {
+                if (userData.mustChangePasswordOnNextLogin && !user?.mustChangePasswordOnNextLogin) {
+                    // update user context first to trigger redirect or just logout
                     logout();
                 }
 

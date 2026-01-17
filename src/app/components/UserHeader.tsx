@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUser } from '../contexts/UserContext';
+import agrobankLogo from '../../assets/agrobank-logo.webp';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from './ui/button';
 import {
@@ -21,11 +22,11 @@ export function UserHeader() {
             <div className="flex h-16 items-center justify-between px-6">
                 {/* Logo Area */}
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">AP</span>
+                    <div className="w-10 h-10 aspect-square bg-white rounded-lg flex items-center justify-center p-1 shadow-sm border">
+                        <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        <h1 className="font-semibold text-lg">Agrobank Portal</h1>
+                        <h1 className="font-semibold text-lg leading-tight">Markaziy Agrobank</h1>
                         <p className="text-xs text-gray-500">Xodimlar uchun</p>
                     </div>
                 </div>

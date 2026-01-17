@@ -1,0 +1,45 @@
+SYSTEM REQUIREMENTS
+===================
+Node.js: v18.0.0 or higher
+npm: v9.0.0 or higher
+OS: Windows, Linux, or macOS
+
+BACKEND DEPENDENCIES (Server)
+============================
+Runtime:
+- @prisma/client: ^5.10.2
+- bcryptjs: ^2.4.3
+- cors: ^2.8.5
+- dotenv: ^16.4.5
+- express: ^4.18.2
+- jsonwebtoken: ^9.0.2
+- multer: ^1.4.5-lts.1 (File Uploads)
+- zod: ^3.22.4 (Validation)
+
+Development:
+- typescript: ^5.9.3
+- ts-node: ^10.9.2
+- prisma: ^5.10.2
+- nodemon: ^3.1.0
+- @types/node: ^20.19.30
+
+FRONTEND DEPENDENCIES (Client)
+=============================
+Core:
+- react: 18.3.1
+- react-dom: 18.3.1
+- react-router-dom: ^7.12.0
+- vite: 6.3.5
+
+UI & Styling:
+- tailwindcss: 4.1.12
+- @mui/material: 7.3.5
+- @radix-ui/* (Primitives)
+- lucide-react: 0.487.0
+- sonner: 2.0.3 (Notifications)
+
+Utilities:
+- axios: ^1.13.2
+- date-fns: 3.6.0
+- xlsx: ^0.18.5
+- react-hook-form: 7.55.0

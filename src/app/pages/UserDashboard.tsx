@@ -1,9 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { formatDateTime } from '../utils/formatters';
 import { FileText, Send, CheckCircle, Clock } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
+
+import { Badge } from '../components/ui/badge';
+
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '../components/ui/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select';
 
 export function UserDashboard() {
     const { user } = useUser();
@@ -14,21 +33,16 @@ export function UserDashboard() {
         drafts: 0,
         recentLetters: [] as any[]
     });
+    const [limit, setLimit] = useState(5);
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [limit]);
 
     const fetchStats = async () => {
         // In a real API, we'd have a specific endpoint for dashboard stats
-        // For mock, we just fetch all letters and calculate
-        const res = await api.letters.list({ limit: 5 }); // Get recent 5
-        // To get totals we'd need a separate call or just rely on 'total' from metadata if it reflects filtered view? 
-        // Actually mock list returns total. But we need breakdown.
-        // Let's assume for mock we just fetch all (mock data is small) or improve mock API.
+        const res = await api.letters.list({ limit }); // Use persistent limit
 
-        // Quick improvement for mock stats:
-        // We'll just fetch a larger list to calc stats clientside for now as it's mock
         const all = await api.letters.list({ limit: 1000 });
         const items = all.items;
 
@@ -69,30 +83,82 @@ export function UserDashboard() {
                 ))}
             </div>
 
-            {/* Recent Activity Section could go here, reusing LettersList or a simplified table */}
-            <h3 className="text-lg font-semibold mt-8 mb-4">So'nggi xatlar</h3>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-4">
-                {stats.recentLetters.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">Hozircha xatlar yo'q</p>
-                ) : (
-                    <div className="space-y-4">
-                        {stats.recentLetters.map(letter => (
-                            <div
-                                key={letter.id}
-                                onClick={() => navigate(`/letters/${letter.id}`, { state: { from: 'dashboard' } })}
-                                className="flex item-center justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 rounded-lg transition-colors dark:border-gray-700"
-                            >
-                                <div>
-                                    <p className="font-medium dark:text-gray-200">{letter.letterNumber || 'Raqamlanmagan'}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{letter.subject}</p>
-                                </div>
-                                <span className={`px-2 py-1 rounded-md text-xs font-medium ${letter.status === 'REGISTERED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-                                    {letter.status === 'REGISTERED' ? 'Ro\'yxatga olingan' : 'Qoralama'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
+            <div className="flex items-center justify-between mt-8 mb-4">
+                <h3 className="text-lg font-semibold">So'nggi xatlar</h3>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">Soni:</span>
+                    <Select value={limit.toString()} onValueChange={(v: string) => setLimit(Number(v))}>
+                        <SelectTrigger className="w-[80px] h-8">
+                            <SelectValue placeholder="Soni" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="15">15</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
+                <Table>
+                    <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
+                        <TableRow>
+                            <TableHead className="w-12 text-center">№</TableHead>
+                            <TableHead>Xat raqami</TableHead>
+                            <TableHead>Ro‘yxatga olingan vaqt</TableHead>
+                            <TableHead>Sana</TableHead>
+                            <TableHead>Indeks</TableHead>
+                            <TableHead>Yuborilgan manzil</TableHead>
+                            <TableHead>Mavzu</TableHead>
+                            <TableHead>Holati</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {stats.recentLetters.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                                    Xatlar topilmadi
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            stats.recentLetters.map((letter, index) => (
+                                <TableRow
+                                    key={letter.id}
+                                    className="cursor-pointer hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors border-gray-100 dark:border-gray-700"
+                                    onClick={() => navigate(`/letters/${letter.id}`, { state: { from: 'dashboard' } })}
+                                >
+                                    <TableCell className="text-center text-gray-500">{index + 1}</TableCell>
+                                    <TableCell className="font-medium dark:text-gray-200">
+                                        {letter.letterNumber ? (
+                                            <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
+                                        ) : (
+                                            <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                                        {formatDateTime(letter.createdDate)}
+                                    </TableCell>
+                                    <TableCell className="dark:text-gray-300">
+                                        {new Date(letter.letterDate).toLocaleDateString('ru-RU')}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className="font-mono">
+                                            {letter.indexCode}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="dark:text-gray-300">{letter.recipient}</TableCell>
+                                    <TableCell className="max-w-xs truncate dark:text-gray-300">{letter.subject}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={letter.status === 'REGISTERED' ? 'default' : 'secondary'} className={letter.status === 'REGISTERED' ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"}>
+                                            {letter.status === 'REGISTERED' ? 'Ro\'yxatga olingan' : 'Qoralama'}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
             </div>
         </div>
     );

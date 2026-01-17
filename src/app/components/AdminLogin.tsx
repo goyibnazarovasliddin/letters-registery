@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Building2, Lock, User } from 'lucide-react';
+import { Lock, User } from 'lucide-react';
+import agrobankLogo from '../../assets/agrobank-logo.webp';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -17,9 +18,9 @@ export function AdminLogin() {
 
   const from = location.state?.from?.pathname || "/admin";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username, password);
+    const success = await login(username, password);
     if (success) {
       toast.success('Muvaffaqiyatli kirildi');
       navigate(from, { replace: true });
@@ -32,10 +33,10 @@ export function AdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 aspect-square bg-white rounded-xl flex items-center justify-center p-2 shadow-md border">
+            <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
           </div>
-          <CardTitle className="text-2xl">Central Agrobank</CardTitle>
+          <CardTitle className="text-2xl">Markaziy Agrobank</CardTitle>
           <CardDescription className="text-base">Admin Panel</CardDescription>
         </CardHeader>
         <CardContent>
@@ -47,7 +48,6 @@ export function AdminLogin() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
@@ -62,7 +62,6 @@ export function AdminLogin() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
@@ -73,9 +72,6 @@ export function AdminLogin() {
             <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
               Kirish
             </Button>
-            <p className="text-xs text-center text-gray-500">
-              Demo: admin / admin
-            </p>
           </form>
         </CardContent>
       </Card>

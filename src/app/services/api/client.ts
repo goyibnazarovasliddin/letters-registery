@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuthResponse, PaginatedList, LetterDTO, FileMeta } from '../../types/portal';
+import { AuthResponse, PaginatedList, LetterDTO, FileMeta, UserDTO } from '../../types/portal';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
@@ -38,6 +38,20 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
+        if (error.response && error.response.status === 401) {
+            // clear tokens
+            localStorage.removeItem('mock_portal_auth_session');
+            localStorage.removeItem('admin_token');
+            // redirect if not already on login
+            if (!window.location.pathname.includes('/login')) {
+                // Check if admin path
+                if (window.location.pathname.startsWith('/admin')) {
+                    window.location.href = '/admin/login';
+                } else {
+                    window.location.href = '/login';
+                }
+            }
+        }
         return Promise.reject(error);
     }
 );
@@ -84,6 +98,32 @@ export const api = {
             }
 
             const response = await axiosInstance.post<LetterDTO>('/letters', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return response.data;
+        },
+
+        update: async (id: string, data: any): Promise<LetterDTO> => {
+            const formData = new FormData();
+
+            // Append text fields
+            Object.keys(data).forEach(key => {
+                if (key !== 'xatFile' && key !== 'ilovaFiles' && data[key] !== null && data[key] !== undefined) {
+                    formData.append(key, data[key]);
+                }
+            });
+
+            // Append files
+            if (data.xatFile) {
+                formData.append('xatFile', data.xatFile);
+            }
+            if (data.ilovaFiles && Array.isArray(data.ilovaFiles)) {
+                data.ilovaFiles.forEach((file: File) => {
+                    formData.append('ilovaFiles', file);
+                });
+            }
+
+            const response = await axiosInstance.put<LetterDTO>(`/letters/${id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             return response.data;
@@ -226,6 +266,17 @@ export const api = {
         },
         permanentDelete: async (id: string) => {
             const response = await axiosInstance.delete(`/users/${id}/permanent`);
+            return response.data;
+        }
+    },
+
+    settings: {
+        get: async () => {
+            const response = await axiosInstance.get('/settings');
+            return response.data;
+        },
+        update: async (data: { allowPastDates: boolean }) => {
+            const response = await axiosInstance.put('/settings', data);
             return response.data;
         }
     }

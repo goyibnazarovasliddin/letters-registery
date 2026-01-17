@@ -1,5 +1,6 @@
 import React from 'react';
-import { Building2, LogOut, Moon, Sun, User } from 'lucide-react';
+import { LogOut, Moon, Sun, User } from 'lucide-react';
+import agrobankLogo from '../../assets/agrobank-logo.webp';
 import { Button } from './ui/button';
 import { useAdmin } from '../contexts/AdminContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,11 +21,11 @@ export function AdminHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 shadow-sm">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 aspect-square bg-white rounded-lg flex items-center justify-center p-1 shadow-sm border">
+            <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-semibold text-lg">Central Agrobank</h1>
+            <h1 className="font-semibold text-lg leading-tight">Markaziy Agrobank</h1>
             <p className="text-xs text-gray-500">Admin Panel</p>
           </div>
         </div>

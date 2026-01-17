@@ -45,6 +45,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from './ui/alert-dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from './ui/select';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 
@@ -66,6 +73,10 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
 
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+
     const filteredDepartments = departments.filter(dept => {
         const matchesSearch = dept.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (dept.description && dept.description.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -79,6 +90,9 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
 
         return matchesSearch && matchesStatus;
     });
+
+    const totalPages = Math.ceil(filteredDepartments.length / limit);
+    const paginatedDepartments = filteredDepartments.slice((page - 1) * limit, page * limit);
 
     const handleAddDepartment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -161,41 +175,61 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <Input
-                        placeholder="Bo'lim nomi bo'yicha qidirish..."
+                        placeholder="Bo'lim nomi yoki tavsifi bo'yicha qidirish..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setPage(1);
+                        }}
                         className="pl-10"
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex items-center gap-2 mr-2">
+                        <span className="text-sm text-gray-500 whitespace-nowrap">Soni:</span>
+                        <div className="w-[80px]">
+                            <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Soni" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10</SelectItem>
+                                    <SelectItem value="15">15</SelectItem>
+                                    <SelectItem value="20">20</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
+                                    <SelectItem value="100">100</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                     <Button
                         variant={statusFilter === 'all' ? 'default' : 'outline'}
-                        onClick={() => setStatusFilter('all')}
+                        onClick={() => { setStatusFilter('all'); setPage(1); }}
                         size="sm"
                     >
                         Barchasi
                     </Button>
                     <Button
                         variant={statusFilter === 'active' ? 'default' : 'outline'}
-                        onClick={() => setStatusFilter('active')}
+                        onClick={() => { setStatusFilter('active'); setPage(1); }}
                         size="sm"
                     >
                         Faol
                     </Button>
                     <Button
                         variant={statusFilter === 'archived' ? 'default' : 'outline'}
-                        onClick={() => setStatusFilter('archived')}
+                        onClick={() => { setStatusFilter('archived'); setPage(1); }}
                         size="sm"
                     >
                         Arxivlangan
                     </Button>
                     <Button
                         variant={statusFilter === 'deleted' ? 'default' : 'outline'}
-                        onClick={() => setStatusFilter('deleted')}
+                        onClick={() => { setStatusFilter('deleted'); setPage(1); }}
                         size="sm"
                         className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-200' : ''}
                     >
@@ -210,39 +244,45 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-12 text-center">№</TableHead>
                             <TableHead>Nomi</TableHead>
                             <TableHead>Tavsif</TableHead>
-                            <TableHead>Xodimlar</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead className="text-center">Xodimlar</TableHead>
+                            <TableHead className="text-center">Status</TableHead>
                             <TableHead className="text-right">Harakatlar</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredDepartments.length === 0 ? (
+                        {paginatedDepartments.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                                     {statusFilter === 'deleted' ? 'Savatcha bo\'sh' : 'Bo\'limlar topilmadi'}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredDepartments.map((dept) => (
+                            paginatedDepartments.map((dept, index) => (
                                 <TableRow key={dept.id}>
-                                    <TableCell className="font-semibold flex items-center gap-2">
-                                        <Building className="w-4 h-4 text-gray-500" />
-                                        {dept.name}
+                                    <TableCell className="text-center text-gray-500">
+                                        {index + 1 + (page - 1) * limit}
+                                    </TableCell>
+                                    <TableCell className="font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <Building className="w-4 h-4 text-gray-500" />
+                                            {dept.name}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-gray-500">{dept.description || '—'}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-center">
                                         <Badge variant="outline">{dept.userCount} ta xodim</Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-center">
                                         {dept.status === 'deleted' ? (
-                                            <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
+                                            <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200 justify-center">
                                                 <Trash2 className="w-3 h-3 mr-1" />
                                                 O'chirilgan
                                             </Badge>
                                         ) : (
-                                            <Badge variant={dept.status === 'active' ? 'default' : 'secondary'}>
+                                            <Badge variant={dept.status === 'active' ? 'default' : 'secondary'} className="justify-center min-w-[100px]">
                                                 {dept.status === 'active' ? 'Faol' : 'Arxivlangan'}
                                             </Badge>
                                         )}
@@ -308,6 +348,27 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                         )}
                     </TableBody>
                 </Table>
+
+                {/* Pagination Controls */}
+                <div className="p-4 border-t flex items-center justify-between">
+                    <Button
+                        variant="ghost"
+                        disabled={page === 1}
+                        onClick={() => setPage(p => p - 1)}
+                    >
+                        Oldingi
+                    </Button>
+                    <span className="text-sm text-gray-500">
+                        Sahifa {page} / {totalPages || 1}
+                    </span>
+                    <Button
+                        variant="ghost"
+                        disabled={page >= totalPages}
+                        onClick={() => setPage(p => p + 1)}
+                    >
+                        Keyingi
+                    </Button>
+                </div>
             </div>
 
             {/* Add Department Modal */}

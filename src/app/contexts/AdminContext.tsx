@@ -64,7 +64,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         id: user.id,
         fish: user.fullName,
         lavozimi: user.position,
-        department: user.department?.name,
+        department: typeof user.department === 'string' ? user.department : user.department?.name,
         departmentId: user.departmentId,
         username: user.username,
         status: user.status,
@@ -79,11 +79,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const mappedLetters = l.items.map((letter: any) => ({
         id: letter.id,
         letterNumber: letter.letterNumber,
+        letterDate: letter.letterDate,
         indexCode: letter.indexCode || '',
         indexName: letter.indexName || '',
+        status: letter.status,
         recipient: letter.recipient,
         subject: letter.subject,
-        content: letter.subject, // simplified
+        summary: letter.summary || '',
         pageCount: letter.pageCount || 0,
         attachmentPageCount: letter.attachmentPageCount || 0,
         userFish: letter.userFish,

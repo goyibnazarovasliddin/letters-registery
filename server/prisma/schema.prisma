@@ -25,6 +25,7 @@ model User {
   letters      Letter[]
   
   mustChangePasswordOnNextLogin Boolean @default(false)
+  tokenVersion                 Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -59,17 +60,17 @@ model Index {
 
 model Letter {
   id           String   @id @default(uuid())
-  letterNumber String   // Auto-generated e.g. "01-01/123"
+  letterNumber String?  // Generated on register: IndexCode/Sequence (e.g., "01-01/15")
   letterDate   String   // YYYY-MM-DD
   
-  indexId      String
-  index        Index    @relation(fields: [indexId], references: [id])
+  indexId      String?
+  index        Index?    @relation(fields: [indexId], references: [id])
   
-  recipient    String
-  subject      String
+  recipient    String?
+  subject      String?
   content      String? // Summary/Content
-  pageCount    Int
-  attachmentPageCount Int
+  pageCount    Int      @default(0)
+  attachmentPageCount Int @default(0)
   
   status       String   @default("DRAFT") // "DRAFT" | "REGISTERED"
   
@@ -95,3 +96,17 @@ model File {
   
   createdAt DateTime @default(now())
 }
+
+
+model YearCounter {
+  year         Int @id
+  lastSequence Int @default(0)
+}
+
+model SystemSettings {
+  id              String  @id @default(uuid())
+  allowPastDates  Boolean @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+

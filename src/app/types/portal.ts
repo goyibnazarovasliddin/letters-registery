@@ -1,14 +1,14 @@
 export interface LetterDTO {
     id: string;
-    letterNumber: string;
+    letterNumber?: string;
     indexId: string;
     indexCode: string;
     indexName: string;
     recipient: string;
     subject: string;
     summary?: string;
-    letterPages: number;
-    attachmentPages: number;
+    pageCount: number;
+    attachmentPageCount: number;
     letterDate: string; // YYYY-MM-DD
     status: 'DRAFT' | 'REGISTERED';
     userFish: string;

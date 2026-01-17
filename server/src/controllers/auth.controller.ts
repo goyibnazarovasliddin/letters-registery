@@ -32,9 +32,6 @@ export const login = async (req: Request, res: Response) => {
             });
         }
 
-        if (user.status !== 'active') {
-            return res.status(401).json({ message: 'Hisobingiz faol emas. Administratorga murojaat qiling.' });
-        }
 
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
@@ -42,7 +39,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
+            { id: user.id, username: user.username, role: user.role, tokenVersion: user.tokenVersion },
             JWT_SECRET,
             { expiresIn: '24h' }
         );

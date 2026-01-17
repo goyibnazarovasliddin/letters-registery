@@ -28,18 +28,18 @@ export function FileUpload({ onFileSelect, onRemove, file, accept, label, loadin
 
     if (file) {
         return (
-            <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900 flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
+            <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FileIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">{file.name}</p>
-                        <p className="text-xs text-blue-600 dark:text-blue-300">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                 </div>
                 {onRemove && (
-                    <Button variant="ghost" size="icon" onClick={onRemove} className="text-blue-500 hover:text-red-500 hover:bg-blue-100">
+                    <Button variant="ghost" size="icon" onClick={onRemove} className="text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">
                         <X className="w-4 h-4" />
                     </Button>
                 )}
