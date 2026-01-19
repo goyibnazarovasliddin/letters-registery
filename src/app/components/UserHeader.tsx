@@ -19,14 +19,14 @@ export function UserHeader() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 shadow-sm">
-            <div className="flex h-16 items-center justify-between px-6">
+            <div className="flex h-16 items-center justify-between px-4 md:px-6">
                 {/* Logo Area */}
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 aspect-square bg-white rounded-lg flex items-center justify-center p-1 shadow-sm border">
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-8 h-8 md:w-10 md:h-10 aspect-square bg-white rounded-lg flex items-center justify-center p-1 shadow-sm border">
                         <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
                     </div>
-                    <div>
-                        <h1 className="font-semibold text-lg leading-tight">Markaziy Agrobank</h1>
+                    <div className="hidden sm:block">
+                        <h1 className="font-semibold text-base md:text-lg leading-tight">Markaziy Agrobank</h1>
                         <p className="text-xs text-gray-500">Xodimlar uchun</p>
                     </div>
                 </div>

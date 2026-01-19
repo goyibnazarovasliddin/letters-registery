@@ -4,7 +4,22 @@ import { z } from 'zod';
 
 const formatLetter = (l: any) => {
     if (!l) return null;
-    return {
+
+    // Self-healing: If REGISTERED but no registeredAt, use updatedDate
+    // This handles legacy or race-condition data
+    let safeRegisteredAt = l.registeredAt?.toISOString() || null;
+    if (l.status === 'REGISTERED' && !safeRegisteredAt) {
+        // We can't await here easily as it's a sync mapper, but we can set the return value to be consistent
+        safeRegisteredAt = l.updatedAt.toISOString();
+
+        // Fire-and-forget DB repair (async)
+        prisma.letter.update({
+            where: { id: l.id },
+            data: { registeredAt: l.updatedAt }
+        }).catch(err => console.error(`[Auto-Repair] Failed to patch letter ${l.id}`, err));
+    }
+
+    const formatted = {
         id: l.id,
         letterNumber: l.letterNumber,
         letterDate: l.letterDate,
@@ -21,11 +36,14 @@ const formatLetter = (l: any) => {
         userPosition: l.user?.position,
         userId: l.userId,
         createdDate: l.createdAt.toISOString(),
+        updatedDate: l.updatedAt.toISOString(),
+        registeredAt: safeRegisteredAt,
         files: {
             xat: l.files?.find((f: any) => f.kind === 'XAT'),
             ilova: l.files?.filter((f: any) => f.kind === 'ILOVA') || []
         }
     };
+    return formatted;
 };
 
 export const listLetters = async (req: Request, res: Response) => {
@@ -86,26 +104,7 @@ export const listLetters = async (req: Request, res: Response) => {
             })
         ]);
 
-        const formatted = letters.map(l => ({
-            id: l.id,
-            letterNumber: l.letterNumber, // Return letterNumber
-            letterDate: l.letterDate,
-            recipient: l.recipient,
-            subject: l.subject,
-            summary: l.content, // mapping db content to summary
-            indexCode: l.index?.code,
-            indexName: l.index?.name,
-            status: l.status,
-            pageCount: l.pageCount,
-            attachmentPageCount: l.attachmentPageCount,
-            userFish: l.user.fullName,
-            userPosition: l.user.position,
-            createdDate: l.createdAt.toISOString(),
-            files: {
-                xat: l.files.find(f => f.kind === 'XAT'),
-                ilova: l.files.filter(f => f.kind === 'ILOVA')
-            }
-        }));
+        const formatted = letters.map(l => formatLetter(l));
 
         res.json({
             items: formatted,
@@ -192,6 +191,7 @@ export const createLetter = async (req: Request, res: Response) => {
                 pageCount: Number(letterPages) || 0,
                 attachmentPageCount: Number(attachmentPages) || 0,
                 status: status || 'DRAFT',
+                registeredAt: status === 'REGISTERED' ? new Date() : null,
                 ...(indexId ? { index: { connect: { id: indexId } } } : {}),
                 user: { connect: { id: userId } },
                 files: {
@@ -221,7 +221,7 @@ export const createLetter = async (req: Request, res: Response) => {
 
                 return await tx.letter.update({
                     where: { id: l.id },
-                    data: { letterNumber },
+                    data: { letterNumber, registeredAt: new Date() },
                     include: { user: true, index: true, files: true }
                 });
             });
@@ -325,6 +325,7 @@ export const updateLetter = async (req: Request, res: Response) => {
                 pageCount: letterPages ? Number(letterPages) : undefined,
                 attachmentPageCount: attachmentPages ? Number(attachmentPages) : undefined,
                 status: status || existingLetter.status,
+                registeredAt: (status === 'REGISTERED' && (existingLetter.status as string) !== 'REGISTERED') ? new Date() : undefined,
                 indexId: indexId || null,
                 // Add new files if any
                 ...(filesData.length > 0 && {
@@ -360,7 +361,7 @@ export const updateLetter = async (req: Request, res: Response) => {
 
                 return await tx.letter.update({
                     where: { id: l.id },
-                    data: { letterNumber },
+                    data: { letterNumber, registeredAt: new Date() },
                     include: { user: true, index: true, files: true }
                 });
             });
@@ -448,6 +449,7 @@ export const registerLetter = async (req: Request, res: Response) => {
                 data: {
                     status: 'REGISTERED',
                     letterNumber: letterNumber,
+                    registeredAt: new Date(),
                     // Ensure createdAt is preserved (it's immutable by default definition but good to know)
                 },
                 include: {
@@ -460,6 +462,7 @@ export const registerLetter = async (req: Request, res: Response) => {
             return updated;
         });
 
+        console.log(`[Register] Success for ID: ${id}, Result Status: ${result.status}, RegisteredAt: ${result.registeredAt}`);
         res.json(formatLetter(result));
 
     } catch (e: any) {

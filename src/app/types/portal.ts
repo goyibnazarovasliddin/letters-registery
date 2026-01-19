@@ -15,6 +15,8 @@ export interface LetterDTO {
     userPosition: string;
     userId: string;
     createdDate: string; // ISO
+    updatedDate: string; // ISO
+    registeredAt?: string | null; // ISO
     files: {
         xat?: FileMeta;
         ilova: FileMeta[];

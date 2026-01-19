@@ -1,0 +1,42 @@
+services:
+  backend:
+    container_name: elektron-jurnal-backend
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_data:/app/prisma
+      - backend_uploads:/app/uploads
+    environment:
+      - DATABASE_URL=file:./prisma/dev.db
+      - PORT=5000
+      - NODE_ENV=production
+      - ADMIN_USERNAME=agrobank.sec.admin
+      - ADMIN_PASSWORD=AgR0B@nk#Sec!Adm1n_26X
+      - USER_USERNAME=user
+      - USER_PASSWORD=user123
+      - SEED_ALLOW_ADMIN_RESET=false
+    labels:
+      - "com.agrobank.project=Elektron Jurnal — Markaziy Agrobank"
+      - "com.agrobank.service=backend"
+    restart: always
+
+  frontend:
+    container_name: elektron-jurnal-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    labels:
+      - "com.agrobank.project=Elektron Jurnal — Markaziy Agrobank"
+      - "com.agrobank.service=frontend"
+    restart: always
+
+volumes:
+  backend_data:
+  backend_uploads:

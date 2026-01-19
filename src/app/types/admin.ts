@@ -42,6 +42,8 @@ export interface Letter {
   userFish: string;
   userPosition: string;
   createdDate: string;
+  updatedDate: string;
+  registeredAt?: string | null;
   signature?: string;
   elektronImzo?: string;
   xatFile?: File | string; // Main letter file

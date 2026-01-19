@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { ChevronLeft, Calendar, FileText, User, Download, File, Send, LayoutDashboard, List, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateTime, formatDate } from '../utils/formatters';
+import { SuccessModal } from '../components/SuccessModal';
 
 export function LetterDetails() {
     const { id } = useParams<{ id: string }>();
@@ -16,6 +17,8 @@ export function LetterDetails() {
     const [letter, setLetter] = useState<LetterDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successData, setSuccessData] = useState<any>(null);
 
     const from = location.state?.from;
 
@@ -59,9 +62,15 @@ export function LetterDetails() {
 
         setRegistering(true);
         try {
-            await api.letters.register(letter.id);
-            toast.success('Xat muvaffaqiyatli ro\'yxatga olindi');
-            fetchLetter(letter.id); // Refresh to show new status
+            const response = await api.letters.register(letter.id);
+            // Show success modal with registered letter data
+            setSuccessData({
+                id: response.id,
+                letterNumber: response.letterNumber,
+                letterDate: response.letterDate,
+                registeredAt: response.registeredAt || response.updatedDate
+            });
+            setShowSuccessModal(true);
         } catch (e) {
             toast.error('Ro\'yxatga olishda xatolik');
         } finally {
@@ -106,11 +115,9 @@ export function LetterDetails() {
                                     {letter.status === 'REGISTERED' ? 'Ro\'yxatga olingan' : 'Qoralama'}
                                 </Badge>
                             </div>
-                            {letter.status === 'REGISTERED' && letter.createdDate && (
-                                <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                    Ro'yxatga olingan vaqt: {formatDateTime(letter.createdDate)}
-                                </p>
-                            )}
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                Ro'yxatga olingan vaqt: {formatDateTime(letter.status === 'REGISTERED' ? (letter.registeredAt || letter.updatedDate) : letter.updatedDate)}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -268,6 +275,21 @@ export function LetterDetails() {
                     </Card>
                 </div>
             </div>
+
+            <SuccessModal
+                open={showSuccessModal}
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    navigate('/letters');
+                }}
+                onViewLetter={() => {
+                    if (successData?.id) {
+                        setShowSuccessModal(false);
+                        fetchLetter(successData.id); // Refresh to show new status
+                    }
+                }}
+                data={successData}
+            />
         </div >
     );
 }

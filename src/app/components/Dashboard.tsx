@@ -111,7 +111,7 @@ export function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -138,7 +138,7 @@ export function Dashboard() {
           <CardTitle>Tezkor harakatlar</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Button
               className="h-auto py-6 flex-col gap-2 bg-green-600 hover:bg-green-700"
               onClick={() => onNavigateToAction('/admin/users', 'create')}
@@ -213,68 +213,70 @@ export function Dashboard() {
               };
 
               return (
-                <Table>
-                  <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
-                    <TableRow>
-                      <TableHead className="w-12 text-center whitespace-nowrap">№</TableHead>
-                      <TableHead className="whitespace-nowrap">Xat raqami</TableHead>
-                      <TableHead className="whitespace-nowrap">Ro‘yxatga olingan vaqt</TableHead>
-                      <TableHead className="whitespace-nowrap">Sana</TableHead>
-                      <TableHead className="whitespace-nowrap">Indeks</TableHead>
-                      <TableHead className="whitespace-nowrap">Yuborilgan manzil</TableHead>
-                      <TableHead className="whitespace-nowrap">Mavzu</TableHead>
-                      <TableHead className="whitespace-nowrap">Mazmuni</TableHead>
-                      <TableHead className="whitespace-nowrap">Xat varaqlari</TableHead>
-                      <TableHead className="whitespace-nowrap">Ilova varaqlari</TableHead>
-                      <TableHead className="whitespace-nowrap">Ijrochi</TableHead>
-                      <TableHead className="whitespace-nowrap">Lavozimi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedLetters.slice(0, limit).length === 0 ? (
+                <div className="min-w-[1000px]">
+                  <Table>
+                    <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                       <TableRow>
-                        <TableCell colSpan={12} className="text-center py-8 text-gray-500">
-                          Hali xatlar yo'q
-                        </TableCell>
+                        <TableHead className="w-12 text-center whitespace-nowrap">№</TableHead>
+                        <TableHead className="whitespace-nowrap">Xat raqami</TableHead>
+                        <TableHead className="whitespace-nowrap">Ro‘yxatga olingan vaqt</TableHead>
+                        <TableHead className="whitespace-nowrap">Sana</TableHead>
+                        <TableHead className="whitespace-nowrap">Indeks</TableHead>
+                        <TableHead className="whitespace-nowrap">Yuborilgan manzil</TableHead>
+                        <TableHead className="whitespace-nowrap">Mavzu</TableHead>
+                        <TableHead className="whitespace-nowrap">Mazmuni</TableHead>
+                        <TableHead className="whitespace-nowrap">Xat varaqlari</TableHead>
+                        <TableHead className="whitespace-nowrap">Ilova varaqlari</TableHead>
+                        <TableHead className="whitespace-nowrap">Ijrochi</TableHead>
+                        <TableHead className="whitespace-nowrap">Lavozimi</TableHead>
                       </TableRow>
-                    ) : (
-                      sortedLetters.slice(0, limit).map((letter, index) => (
-                        <TableRow
-                          key={letter.id}
-                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                          onClick={() => setSelectedLetter(letter)}
-                        >
-                          <TableCell className="text-center text-gray-500">{index + 1}</TableCell>
-                          <TableCell className="font-medium dark:text-gray-200">
-                            {letter.letterNumber ? (
-                              <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
-                            ) : (
-                              <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
-                            )}
+                    </TableHeader>
+                    <TableBody>
+                      {sortedLetters.slice(0, limit).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                            Hali xatlar yo'q
                           </TableCell>
-                          <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap">
-                            {letter.createdDate ? formatDateTime(letter.createdDate) : '-'}
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                            {letter.letterDate ? new Date(letter.letterDate).toLocaleDateString('ru-RU') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono whitespace-nowrap">
-                              {letter.indexCode}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-[150px] truncate" title={letter.recipient}>{letter.recipient}</TableCell>
-                          <TableCell className="max-w-[200px] truncate" title={letter.subject}>{letter.subject}</TableCell>
-                          <TableCell className="max-w-[200px] truncate" title={letter.summary}>{letter.summary || '-'}</TableCell>
-                          <TableCell className="text-center">{letter.pageCount}</TableCell>
-                          <TableCell className="text-center">{letter.attachmentPageCount}</TableCell>
-                          <TableCell className="text-sm whitespace-nowrap">{letter.userFish}</TableCell>
-                          <TableCell className="text-sm text-gray-500 whitespace-nowrap">{letter.userPosition}</TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        sortedLetters.slice(0, limit).map((letter, index) => (
+                          <TableRow
+                            key={letter.id}
+                            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            onClick={() => setSelectedLetter(letter)}
+                          >
+                            <TableCell className="text-center text-gray-500">{index + 1}</TableCell>
+                            <TableCell className="font-medium dark:text-gray-200">
+                              {letter.letterNumber ? (
+                                <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
+                              ) : (
+                                <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap">
+                              {letter.createdDate ? formatDateTime(letter.createdDate) : '-'}
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              {letter.letterDate ? new Date(letter.letterDate).toLocaleDateString('ru-RU') : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono whitespace-nowrap">
+                                {letter.indexCode}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[150px] truncate" title={letter.recipient}>{letter.recipient}</TableCell>
+                            <TableCell className="max-w-[200px] truncate" title={letter.subject}>{letter.subject}</TableCell>
+                            <TableCell className="max-w-[200px] truncate" title={letter.summary}>{letter.summary || '-'}</TableCell>
+                            <TableCell className="text-center">{letter.pageCount}</TableCell>
+                            <TableCell className="text-center">{letter.attachmentPageCount}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{letter.userFish}</TableCell>
+                            <TableCell className="text-sm text-gray-500 whitespace-nowrap">{letter.userPosition}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               );
             })()}
           </div>

@@ -184,9 +184,9 @@ export function Reports() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-6">
             {/* Start Date */}
-            <div className="xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="md:col-span-1 xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Calendar className="w-4 h-4 text-green-600" />
                 Boshlanish sanasi
@@ -213,7 +213,7 @@ export function Reports() {
             </div>
 
             {/* End Date */}
-            <div className="xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="md:col-span-1 xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Calendar className="w-4 h-4 text-green-600" />
                 Tugash sanasi
@@ -240,7 +240,7 @@ export function Reports() {
             </div>
 
             {/* Other Selection Filters */}
-            <div className="xl:col-span-2 space-y-2">
+            <div className="md:col-span-2 xl:col-span-2 space-y-2">
               <Label>Indeks</Label>
               <Select value={selectedIndex} onValueChange={setSelectedIndex}>
                 <SelectTrigger>
@@ -255,7 +255,7 @@ export function Reports() {
               </Select>
             </div>
 
-            <div className="xl:col-span-2 space-y-2">
+            <div className="md:col-span-2 xl:col-span-2 space-y-2">
               <Label>Ijrochi</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
                 <SelectTrigger>
@@ -270,7 +270,7 @@ export function Reports() {
               </Select>
             </div>
 
-            <div className="xl:col-span-2 space-y-2">
+            <div className="md:col-span-2 xl:col-span-2 space-y-2">
               <Label>Tartiblash (Xat raqami)</Label>
               <Select
                 value={sortConfig?.direction || 'none'}
@@ -357,8 +357,8 @@ export function Reports() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg bg-white dark:bg-gray-900">
-            <div>
+          <div className="border rounded-lg bg-white dark:bg-gray-900 overflow-x-auto">
+            <div className="min-w-[800px]">
               <Table>
                 <TableHeader>
                   <TableRow>

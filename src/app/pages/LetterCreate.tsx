@@ -223,7 +223,7 @@ export function LetterCreate() {
                     id: response.id,
                     letterNumber: response.letterNumber,
                     letterDate: response.letterDate,
-                    createdAt: response.createdDate
+                    registeredAt: response.registeredAt || response.updatedDate
                 });
                 setShowSuccessModal(true);
                 // Don't navigate yet, modal handles it

@@ -67,7 +67,7 @@ export function UserDashboard() {
                 <p className="text-gray-500 text-sm">Bugungi ko'rsatkichlaringiz</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {statCards.map((card, i) => (
                     <Card key={i} className="border-none shadow-md hover:shadow-lg transition-shadow dark:bg-gray-800 dark:text-gray-100">
                         <CardContent className="p-6 flex items-center gap-4">
@@ -137,7 +137,7 @@ export function UserDashboard() {
                                         )}
                                     </TableCell>
                                     <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                                        {formatDateTime(letter.createdDate)}
+                                        {formatDateTime(letter.status === 'REGISTERED' ? (letter.registeredAt || letter.updatedDate) : letter.updatedDate)}
                                     </TableCell>
                                     <TableCell className="dark:text-gray-300">
                                         {new Date(letter.letterDate).toLocaleDateString('ru-RU')}

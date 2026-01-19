@@ -189,9 +189,9 @@ export function LettersRegistry() {
         </div>
       </div>
 
-      {/* Letters Table - No horizontal scroll */}
-      <div className="border rounded-lg bg-white dark:bg-gray-900">
-        <div>
+      {/* Letters Table */}
+      <div className="border rounded-lg bg-white dark:bg-gray-900 overflow-x-auto">
+        <div className="min-w-[1200px]">
           <Table>
             <TableHeader>
               <TableRow>
@@ -233,7 +233,7 @@ export function LettersRegistry() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                      {formatDateTime(letter.createdDate)}
+                      {formatDateTime(letter.status === 'REGISTERED' ? (letter.registeredAt || letter.updatedDate) : letter.updatedDate)}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 dark:text-gray-400">
                       {letter.letterDate ? new Date(letter.letterDate).toLocaleDateString('ru-RU') : '-'}
@@ -320,9 +320,9 @@ export function LettersRegistry() {
                         <FileText className="w-4 h-4" />
                       </Button>
                     </div>
-                    {selectedLetter.createdDate && (
+                    {(selectedLetter.status === 'REGISTERED' || selectedLetter.updatedDate) && (
                       <p className="text-sm text-gray-500 mt-1">
-                        Ro‘yxatga olingan vaqt: <span className="font-mono">{formatDateTime(selectedLetter.createdDate)}</span>
+                        Ro‘yxatga olingan vaqt: <span className="font-mono">{formatDateTime(selectedLetter.status === 'REGISTERED' ? (selectedLetter.registeredAt || selectedLetter.updatedDate) : selectedLetter.updatedDate)}</span>
                       </p>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 {
-    "name": "admin-dashboard-server",
+    "name": "elektron-jurnal-backend",
     "version": "1.0.0",
-    "description": "Backend for Admin Dashboard and User Portal",
+    "description": "Backend server for Elektron Jurnal — Markaziy Agrobank outgoing letters registration system",
     "main": "dist/server.js",
     "scripts": {
         "start": "node dist/server.js",

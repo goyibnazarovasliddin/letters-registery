@@ -80,8 +80,8 @@ export function LettersList() {
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-                <form onSubmit={handleSearch} className="flex gap-2">
-                    <div className="relative flex-1">
+                <form onSubmit={handleSearch} className="flex flex-wrap gap-2">
+                    <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                             placeholder="Xat raqami, indeks kodi, mavzu yoki qabul qiluvchi bo'yicha qidirish..."
@@ -175,7 +175,7 @@ export function LettersList() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                                                    {formatDateTime(letter.createdDate)}
+                                                    {formatDateTime(letter.status === 'REGISTERED' ? (letter.registeredAt || letter.updatedDate) : letter.updatedDate) || '-'}
                                                 </TableCell>
                                                 <TableCell className="dark:text-gray-300">
                                                     {new Date(letter.letterDate).toLocaleDateString('ru-RU')}

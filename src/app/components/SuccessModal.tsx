@@ -12,7 +12,7 @@ interface SuccessModalProps {
     data: {
         letterNumber: string;
         letterDate: string;
-        createdAt: string;
+        registeredAt: string;
     } | null;
 }
 
@@ -60,10 +60,10 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
                             <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
                                 <Calendar className="w-5 h-5 text-blue-500 mb-1.5" />
                                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-                                    {data.createdAt ? new Date(data.createdAt).toLocaleDateString('ru-RU') : '-'}
+                                    {data.registeredAt ? new Date(data.registeredAt).toLocaleDateString('ru-RU') : '-'}
                                 </span>
                                 <span className="text-[11px] font-medium text-blue-600/70 dark:text-blue-400/70 tabular-nums">
-                                    {data.createdAt ? new Date(data.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                    {data.registeredAt ? new Date(data.registeredAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : ''}
                                 </span>
                             </div>
                         </div>
