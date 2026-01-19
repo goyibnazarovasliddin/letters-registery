@@ -233,7 +233,7 @@ Frontend `http://localhost:5173` manzilida, Backend esa `http://localhost:5000` 
 ---
 
 <a name="english-version"></a>
-# 🇬🇧 English Version
+# en English Version
 
 ## About the Project
 
