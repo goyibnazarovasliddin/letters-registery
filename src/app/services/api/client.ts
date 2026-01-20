@@ -1,54 +1,102 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { AuthResponse, PaginatedList, LetterDTO, FileMeta, UserDTO } from '../../types/portal';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// 1) Base URL setup
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL
 });
 
-// Request interceptor for API calls
-axiosInstance.interceptors.request.use(
-    async config => {
-        const storedAuth = localStorage.getItem('mock_portal_auth_session');
-        const adminAuth = localStorage.getItem('admin_token');
+const STORAGE_KEYS = {
+    USER_SESSION: 'mock_portal_auth_session',
+    ADMIN_TOKEN: 'admin_token'
+};
 
-        const isPathAdmin = window.location.pathname.startsWith('/admin');
+const ADMIN_ENDPOINTS = [
+    '/users',
+    '/departments',
+    '/indices',
+    '/settings'
+];
 
-        let token = null;
+// Helper to safely access window/localStorage
+const isBrowser = typeof window !== 'undefined';
 
-        if (isPathAdmin && adminAuth) {
-            token = adminAuth;
-        } else if (storedAuth) {
+const getStorageItem = (key: string): string | null => {
+    if (!isBrowser) return null;
+    return localStorage.getItem(key);
+};
+
+const removeStorageItem = (key: string): void => {
+    if (!isBrowser) return;
+    localStorage.removeItem(key);
+};
+
+// 3) Token selection logic
+const getAccessToken = (config: InternalAxiosRequestConfig): string | null => {
+    const url = config.url || '';
+
+    // Check if request is strictly for an admin endpoint
+    const isAdminEndpoint = ADMIN_ENDPOINTS.some(endpoint => url.startsWith(endpoint));
+
+    // Also check UI path for backward compatibility/context
+    const isAdminPath = isBrowser && window.location.pathname.startsWith('/admin');
+
+    if (isAdminEndpoint || isAdminPath) {
+        return getStorageItem(STORAGE_KEYS.ADMIN_TOKEN);
+    }
+
+    // Default to user token
+    const storedAuth = getStorageItem(STORAGE_KEYS.USER_SESSION);
+    if (storedAuth) {
+        try {
             const session = JSON.parse(storedAuth);
-            if (session.accessToken) token = session.accessToken;
+            return session.accessToken || null;
+        } catch (e) {
+            console.error('Failed to parse user session', e);
+            return null;
         }
+    }
 
+    return null;
+};
+
+// Request interceptor
+axiosInstance.interceptors.request.use(
+    async (config) => {
+        const token = getAccessToken(config);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    error => {
-        Promise.reject(error)
+    (error) => {
+        // 2) Fix return
+        return Promise.reject(error);
     }
 );
 
-// Response interceptor for API calls
+// Response interceptor
 axiosInstance.interceptors.response.use(
     (response) => response,
-    async (error) => {
+    async (error: AxiosError) => {
         if (error.response && error.response.status === 401) {
-            // clear tokens
-            localStorage.removeItem('mock_portal_auth_session');
-            localStorage.removeItem('admin_token');
-            // redirect if not already on login
-            if (!window.location.pathname.includes('/login')) {
-                // Check if admin path
-                if (window.location.pathname.startsWith('/admin')) {
-                    window.location.href = '/admin/login';
+            if (isBrowser) {
+                // 4) Smart token removal & redirection
+                const isAdminPath = window.location.pathname.startsWith('/admin');
+
+                // Clear the relevant token based on context
+                if (isAdminPath) {
+                    removeStorageItem(STORAGE_KEYS.ADMIN_TOKEN);
+                    if (!window.location.pathname.includes('/admin/login')) {
+                        window.location.href = '/admin/login';
+                    }
                 } else {
-                    window.location.href = '/login';
+                    removeStorageItem(STORAGE_KEYS.USER_SESSION);
+                    if (!window.location.pathname.includes('/login')) {
+                        window.location.href = '/login';
+                    }
                 }
             }
         }
@@ -83,7 +131,8 @@ export const api = {
             // Append text fields
             Object.keys(data).forEach(key => {
                 if (key !== 'xatFile' && key !== 'ilovaFiles' && data[key] !== null && data[key] !== undefined) {
-                    formData.append(key, data[key]);
+                    // 5) Ensure strings
+                    formData.append(key, String(data[key]));
                 }
             });
 
@@ -97,9 +146,8 @@ export const api = {
                 });
             }
 
-            const response = await axiosInstance.post<LetterDTO>('/letters', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            // 5) Remove manual Content-Type
+            const response = await axiosInstance.post<LetterDTO>('/letters', formData);
             return response.data;
         },
 
@@ -109,7 +157,7 @@ export const api = {
             // Append text fields
             Object.keys(data).forEach(key => {
                 if (key !== 'xatFile' && key !== 'ilovaFiles' && data[key] !== null && data[key] !== undefined) {
-                    formData.append(key, data[key]);
+                    formData.append(key, String(data[key]));
                 }
             });
 
@@ -123,9 +171,8 @@ export const api = {
                 });
             }
 
-            const response = await axiosInstance.put<LetterDTO>(`/letters/${id}`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            // 5) Remove manual Content-Type
+            const response = await axiosInstance.put<LetterDTO>(`/letters/${id}`, formData);
             return response.data;
         },
 
@@ -146,40 +193,51 @@ export const api = {
         },
 
         download: async (fileId: string): Promise<void> => {
-            // We use window.open for download to trigger browser download behavior
-            // We need to use the token for auth if the route is protected.
-            // Since it's a simple GET, we might need to handle auth via query param or just open it if it is public (but it shouldn't be).
-            // For now, let's assume `window.open` works if we use a special endpoint or if we rely on cookie (which we don't use).
-            // ALTERNATIVE: Axios blob download.
-
             try {
+                // 6) Blob download
                 const response = await axiosInstance.get(`/letters/files/${fileId}/download`, {
                     responseType: 'blob'
                 });
 
-                // Create blob link to download
                 const contentType = response.headers['content-type'];
-                const url = window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
-                const link = document.createElement('a');
-                link.href = url;
-
-                // Try to get filename from content-disposition
                 const contentDisposition = response.headers['content-disposition'];
-                let fileName = 'file';
+
+                let fileName = 'document';
+
+                // 6) Robust filename parsing
                 if (contentDisposition) {
-                    const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
-                    if (fileNameMatch.length === 2)
-                        fileName = fileNameMatch[1];
+                    // Start by checking for UTF-8 filename
+                    const utf8FilenameRegex = /filename\*=UTF-8''([\w%\-\.]+)(?:; ?|$)/i;
+                    const utf8Match = contentDisposition.match(utf8FilenameRegex);
+
+                    if (utf8Match && utf8Match[1]) {
+                        fileName = decodeURIComponent(utf8Match[1]);
+                    } else {
+                        // Fallback to standard filename
+                        const filenameRegex = /filename="?([^"]+)"?/;
+                        const standardMatch = contentDisposition.match(filenameRegex);
+                        if (standardMatch && standardMatch[1]) {
+                            fileName = standardMatch[1];
+                        }
+                    }
                 }
 
+                const blob = new Blob([response.data], { type: contentType });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
                 link.setAttribute('download', fileName);
                 document.body.appendChild(link);
                 link.click();
+
+                // Cleanup
                 link.remove();
+                window.URL.revokeObjectURL(url);
+
             } catch (e) {
                 console.error("Download failed", e);
-                // Fallback or alert
-                alert("Faylni yuklab olishda xatolik");
+                // 6) Graceful error
+                throw new Error("Faylni yuklab olish imkonsiz");
             }
         }
     },
