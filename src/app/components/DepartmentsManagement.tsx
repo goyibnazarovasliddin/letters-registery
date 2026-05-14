@@ -54,13 +54,16 @@ import {
 } from './ui/select';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
+import { TableSkeleton } from './ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 
 interface DepartmentsManagementProps {
     initialAction?: string;
 }
 
 export function DepartmentsManagement({ initialAction }: DepartmentsManagementProps) {
-    const { departments, addDepartment, updateDepartment, archiveDepartment, activateDepartment, deleteDepartment, restoreDepartment, permanentDeleteDepartment } = useAdmin();
+    const { departments, addDepartment, updateDepartment, archiveDepartment, activateDepartment, deleteDepartment, restoreDepartment, permanentDeleteDepartment, isLoading } = useAdmin();
+    const { t } = useT();
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived' | 'deleted'>('all');
     const [showAddModal, setShowAddModal] = useState(initialAction === 'create');
@@ -100,7 +103,7 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
         setShowAddModal(false);
         setName('');
         setDescription('');
-        toast.success('Bo\'lim qo\'shildi');
+        toast.success(t('toast.deptAdded'));
     };
 
     const handleEditDepartment = (e: React.FormEvent) => {
@@ -112,7 +115,7 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
         setSelectedDepartment(null);
         setName('');
         setDescription('');
-        toast.success('Bo\'lim yangilandi');
+        toast.success(t('toast.deptUpdated'));
     };
 
     const handleArchive = () => {
@@ -120,12 +123,12 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
         archiveDepartment(selectedDepartment.id);
         setShowArchiveDialog(false);
         setSelectedDepartment(null);
-        toast.success('Bo\'lim arxivlandi');
+        toast.success(t('toast.deptArchived'));
     };
 
     const handleActivate = (id: string) => {
         activateDepartment(id);
-        toast.success('Bo\'lim faollashtirildi');
+        toast.success(t('toast.deptActivated'));
     };
 
     const handleDeleteDepartment = () => {
@@ -133,12 +136,12 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
         deleteDepartment(selectedDepartment.id);
         setShowDeleteDialog(false);
         setSelectedDepartment(null);
-        toast.success('Bo\'lim savatchaga o\'tkazildi');
+        toast.success(t('toast.deptMovedToTrash'));
     };
 
     const handleRestoreDepartment = (id: string) => {
         restoreDepartment(id);
-        toast.success('Bo\'lim tiklandi');
+        toast.success(t('toast.deptRestored'));
     };
 
     const openEditModal = (dept: { id: string; name: string; description?: string }) => {
@@ -159,18 +162,18 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-semibold mb-1">Bo'limlar</h2>
-                    <p className="text-gray-500">Tashkilot bo'limlarini boshqarish</p>
+                    <h2 className="text-2xl font-semibold mb-1">{t('departments.title')}</h2>
+                    <p className="text-gray-500">{t('nav.departments')}</p>
                 </div>
                 <Button
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => setShowAddModal(true)}
                 >
                     <Plus className="w-4 h-4 mr-2" />
-                    Bo'lim qo'shish
+                    {t('dashboard.addDepartment')}
                 </Button>
             </div>
 
@@ -179,7 +182,7 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <Input
-                        placeholder="Bo'lim nomi yoki tavsifi bo'yicha qidirish..."
+                        placeholder={t('common.search')}
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -190,11 +193,11 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <div className="flex items-center gap-2 mr-2">
-                        <span className="text-sm text-gray-500 whitespace-nowrap">Soni:</span>
+                        <span className="text-sm text-gray-500 whitespace-nowrap">{t('common.count')}</span>
                         <div className="w-[80px]">
                             <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Soni" />
+                                    <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="10">10</SelectItem>
@@ -207,56 +210,62 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                         </div>
                     </div>
                     <Button
-                        variant={statusFilter === 'all' ? 'default' : 'outline'}
+                        variant="outline"
                         onClick={() => { setStatusFilter('all'); setPage(1); }}
                         size="sm"
+                        className={statusFilter === 'all' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
                     >
-                        Barchasi
+                        {t('common.all')}
                     </Button>
                     <Button
-                        variant={statusFilter === 'active' ? 'default' : 'outline'}
+                        variant="outline"
                         onClick={() => { setStatusFilter('active'); setPage(1); }}
                         size="sm"
+                        className={statusFilter === 'active' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
                     >
-                        Faol
+                        {t('common.active')}
                     </Button>
                     <Button
-                        variant={statusFilter === 'archived' ? 'default' : 'outline'}
+                        variant="outline"
                         onClick={() => { setStatusFilter('archived'); setPage(1); }}
                         size="sm"
+                        className={statusFilter === 'archived' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
                     >
-                        Arxivlangan
+                        {t('common.disabled')}
                     </Button>
                     <Button
-                        variant={statusFilter === 'deleted' ? 'default' : 'outline'}
+                        variant="outline"
                         onClick={() => { setStatusFilter('deleted'); setPage(1); }}
                         size="sm"
-                        className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-200' : ''}
+                        className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800' : ''}
                     >
                         <Trash2 className="w-3 h-3 mr-2" />
-                        Savatcha
+                        {t('common.trash')}
                     </Button>
                 </div>
             </div>
 
             {/* Departments Table */}
+            {isLoading ? (
+                <TableSkeleton rows={6} cols={5} />
+            ) : (
             <div className="border rounded-lg bg-white dark:bg-gray-900">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-12 text-center">№</TableHead>
-                            <TableHead>Nomi</TableHead>
-                            <TableHead>Tavsif</TableHead>
-                            <TableHead className="text-center">Xodimlar</TableHead>
-                            <TableHead className="text-center">Status</TableHead>
-                            <TableHead className="text-right">Harakatlar</TableHead>
+                            <TableHead className="w-12 text-center">{t('common.no')}</TableHead>
+                            <TableHead>{t('departments.name')}</TableHead>
+                            <TableHead>{t('departments.description')}</TableHead>
+                            <TableHead className="text-center w-[140px]">{t('departments.users')}</TableHead>
+                            <TableHead className="text-center w-[150px]">{t('common.status')}</TableHead>
+                            <TableHead className="text-right">{t('common.actions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {paginatedDepartments.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                                    {statusFilter === 'deleted' ? 'Savatcha bo\'sh' : 'Bo\'limlar topilmadi'}
+                                    {statusFilter === 'deleted' ? t('users.trashEmpty') : t('common.notFound')}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -273,17 +282,17 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                                     </TableCell>
                                     <TableCell className="text-gray-500">{dept.description || '—'}</TableCell>
                                     <TableCell className="text-center">
-                                        <Badge variant="outline">{dept.userCount} ta xodim</Badge>
+                                        <Badge variant="outline">{t('departments.userCount').replace('{n}', String(dept.userCount))}</Badge>
                                     </TableCell>
-                                    <TableCell className="text-center">
+                                    <TableCell className="text-center w-[150px]">
                                         {dept.status === 'deleted' ? (
-                                            <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200 justify-center">
+                                            <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200 justify-center w-[120px]">
                                                 <Trash2 className="w-3 h-3 mr-1" />
-                                                O'chirilgan
+                                                {t('common.deleted')}
                                             </Badge>
                                         ) : (
-                                            <Badge variant={dept.status === 'active' ? 'default' : 'secondary'} className="justify-center min-w-[100px]">
-                                                {dept.status === 'active' ? 'Faol' : 'Arxivlangan'}
+                                            <Badge variant={dept.status === 'active' ? 'default' : 'secondary'} className="justify-center w-[120px]">
+                                                {dept.status === 'active' ? t('common.active') : t('common.archived')}
                                             </Badge>
                                         )}
                                     </TableCell>
@@ -299,36 +308,36 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                                                     <>
                                                         <DropdownMenuItem onClick={() => handleRestoreDepartment(dept.id)}>
                                                             <RefreshCcw className="w-4 h-4 mr-2" />
-                                                            Tiklash
+                                                            {t('common.restore')}
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => {
-                                                                if (window.confirm("Haqiqatdan ham bu bo'limni butunlay o'chirmoqchimisiz?")) {
+                                                                if (window.confirm(t('dialog.permanentDeleteConfirm'))) {
                                                                     permanentDeleteDepartment(dept.id);
-                                                                    toast.success("Bo'lim butunlay o'chirildi");
+                                                                    toast.success(t('common.deleted'));
                                                                 }
                                                             }}
                                                             className="text-red-600 focus:text-red-600"
                                                         >
                                                             <Trash2 className="w-4 h-4 mr-2" />
-                                                            Butunlay o'chirish
+                                                            {t('users.permanentDelete')}
                                                         </DropdownMenuItem>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <DropdownMenuItem onClick={() => openEditModal(dept)}>
                                                             <Edit2 className="w-4 h-4 mr-2" />
-                                                            Tahrirlash
+                                                            {t('common.edit')}
                                                         </DropdownMenuItem>
                                                         {dept.status === 'active' ? (
                                                             <DropdownMenuItem onClick={() => openArchiveDialog(dept)}>
                                                                 <Archive className="w-4 h-4 mr-2" />
-                                                                Arxivlash
+                                                                {t('common.archive')}
                                                             </DropdownMenuItem>
                                                         ) : (
                                                             <DropdownMenuItem onClick={() => handleActivate(dept.id)}>
                                                                 <Building className="w-4 h-4 mr-2" />
-                                                                Faollashtirish
+                                                                {t('common.activate')}
                                                             </DropdownMenuItem>
                                                         )}
                                                         <DropdownMenuItem
@@ -336,7 +345,7 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                                                             className="text-red-600 focus:text-red-600 focus:bg-red-50"
                                                         >
                                                             <Trash2 className="w-4 h-4 mr-2" />
-                                                            O'chirish (Savatchaga)
+                                                            {t('users.moveToTrash')}
                                                         </DropdownMenuItem>
                                                     </>
                                                 )}
@@ -356,46 +365,47 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                         disabled={page === 1}
                         onClick={() => setPage(p => p - 1)}
                     >
-                        Oldingi
+                        {t('common.previous')}
                     </Button>
                     <span className="text-sm text-gray-500">
-                        Sahifa {page} / {totalPages || 1}
+                        {t('common.page')} {page} / {totalPages || 1}
                     </span>
                     <Button
                         variant="ghost"
                         disabled={page >= totalPages}
                         onClick={() => setPage(p => p + 1)}
                     >
-                        Keyingi
+                        {t('common.next')}
                     </Button>
                 </div>
             </div>
+            )}
 
             {/* Add Department Modal */}
             <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Yangi bo'lim qo'shish</DialogTitle>
+                        <DialogTitle>{t('departments.add')}</DialogTitle>
                         <DialogDescription>
-                            Bo'lim ma'lumotlarini kiriting
+                            {t('departments.descPlaceholder')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleAddDepartment} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Nomi *</Label>
+                            <Label htmlFor="name">{t('departments.name')} *</Label>
                             <Input
                                 id="name"
-                                placeholder="Axborot texnologiyalari bo'limi"
+                                placeholder={t('departments.namePlaceholder')}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 required
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Tavsif (ixtiyoriy)</Label>
+                            <Label htmlFor="description">{t('departments.description')} ({t('common.optional')})</Label>
                             <Input
                                 id="description"
-                                placeholder="Bo'lim faoliyati haqida qisqacha"
+                                placeholder={t('departments.descPlaceholder')}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
@@ -410,10 +420,10 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                                     setDescription('');
                                 }}
                             >
-                                Bekor qilish
+                                {t('common.cancel')}
                             </Button>
                             <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                Qo'shish
+                                {t('common.add')}
                             </Button>
                         </div>
                     </form>
@@ -424,14 +434,14 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
             <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Bo'limni tahrirlash</DialogTitle>
+                        <DialogTitle>{t('departments.edit')}</DialogTitle>
                         <DialogDescription>
-                            Bo'lim ma'lumotlarini yangilang
+                            {t('departments.descPlaceholder')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleEditDepartment} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="edit-name">Nomi *</Label>
+                            <Label htmlFor="edit-name">{t('departments.name')} *</Label>
                             <Input
                                 id="edit-name"
                                 value={name}
@@ -440,7 +450,7 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit-description">Tavsif</Label>
+                            <Label htmlFor="edit-description">{t('departments.description')}</Label>
                             <Input
                                 id="edit-description"
                                 value={description}
@@ -458,10 +468,10 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                                     setDescription('');
                                 }}
                             >
-                                Bekor qilish
+                                {t('common.cancel')}
                             </Button>
                             <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                Saqlash
+                                {t('common.save')}
                             </Button>
                         </div>
                     </form>
@@ -472,21 +482,20 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
             <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Bo'limni arxivlash</AlertDialogTitle>
+                        <AlertDialogTitle>{t('dialog.confirmArchive')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            <span className="font-semibold">{selectedDepartment?.name}</span>ni arxivlamoqchimisiz?
-                            Arxivlangan bo'limlarni yangi foydalanuvchilar tanlasholmaydi.
+                            {t('users.areYouSure')} <span className="font-semibold">{selectedDepartment?.name}</span> {t('departments.archiveConfirm')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setSelectedDepartment(null)}>
-                            Bekor qilish
+                            {t('common.cancel')}
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleArchive}
                             className="bg-orange-600 hover:bg-orange-700"
                         >
-                            Arxivlash
+                            {t('common.archive')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -498,21 +507,22 @@ export function DepartmentsManagement({ initialAction }: DepartmentsManagementPr
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2 text-red-600">
                             <TriangleAlert className="w-5 h-5" />
-                            O'chirishni tasdiqlang
+                            {t('dialog.confirmDelete')}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="space-y-2 pt-2">
                             <p>
-                                Siz haqiqatdan ham <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedDepartment?.name}</span>ni o'chirmoqchimisiz?
+                                {t('users.areYouSure')} <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedDepartment?.name}</span> {t('departments.deleteConfirm')}
                             </p>
-                            <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-md border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 text-sm">
-                                ⚠️ O'chirilgan ma'lumotlar savatchaga tushadi va <strong>30 kundan keyin</strong> butunlay o'chib ketadi.
+                            <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-md border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 text-sm flex items-start gap-2">
+                                <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                                <span>{t('dialog.deleteSoftWarning')}</span>
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setSelectedDepartment(null)}>Bekor qilish</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => setSelectedDepartment(null)}>{t('common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteDepartment} className="bg-red-600 hover:bg-red-700">
-                            O'chirish
+                            {t('common.delete')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -13,6 +13,8 @@ import { Reports } from './components/Reports';
 import { LettersRegistry } from './components/LettersRegistry';
 import { DepartmentsManagement } from './components/DepartmentsManagement';
 import { Toaster } from './components/ui/sonner';
+import { PageLoader } from './components/ui/PageLoader';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 import { UserLogin } from './components/UserLogin';
 import { UserPortal } from './components/UserPortal';
@@ -41,7 +43,7 @@ function ProtectedUserRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Yuklanmoqda...</div>;
+    return <PageLoader fullScreen />;
   }
 
   if (!isAuthenticated) {
@@ -87,12 +89,14 @@ function IndicesManagementWithParams() {
 
 function RootProviders() {
   return (
-    <AdminProvider>
-      <UserProvider>
-        <Outlet />
-        <Toaster position="top-right" richColors />
-      </UserProvider>
-    </AdminProvider>
+    <LanguageProvider>
+      <AdminProvider>
+        <UserProvider>
+          <Outlet />
+          <Toaster position="top-right" richColors />
+        </UserProvider>
+      </AdminProvider>
+    </LanguageProvider>
   );
 }
 

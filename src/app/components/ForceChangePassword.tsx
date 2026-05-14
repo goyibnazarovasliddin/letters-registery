@@ -8,36 +8,38 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { Lock } from 'lucide-react';
 import { api } from '../services/api/client';
+import { useT } from '../contexts/LanguageContext';
 
 export function ForceChangePassword() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const navigate = useNavigate();
     const { user, updateUser } = useUser();
+    const { t } = useT();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (newPassword.length < 5) {
-            toast.error('Parol kamida 5 ta belgidan iborat bo\'lishi kerak');
+            toast.error(t('toast.passwordShort'));
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            toast.error('Parollar mos kelmadi');
+            toast.error(t('toast.passwordMismatch'));
             return;
         }
 
         try {
             await api.auth.changePassword(newPassword);
-            toast.success('Parol muvaffaqiyatli o\'zgartirildi');
+            toast.success(t('toast.passwordChanged'));
 
             // Update local user state so they can access the portal
             updateUser({ mustChangePasswordOnNextLogin: false });
 
             navigate('/');
         } catch (e: any) {
-            toast.error(e.response?.data?.message || 'Parolni o\'zgartirishda xatolik');
+            toast.error(e.response?.data?.message || t('toast.passwordChangeError'));
         }
     };
 
@@ -48,15 +50,15 @@ export function ForceChangePassword() {
                     <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-2">
                         <Lock className="w-6 h-6 text-amber-600 dark:text-amber-500" />
                     </div>
-                    <CardTitle className="dark:text-gray-100">Parolni yangilash talab etiladi</CardTitle>
+                    <CardTitle className="dark:text-gray-100">{t('force.title')}</CardTitle>
                     <CardDescription className="dark:text-gray-400">
-                        Xavfsizlik maqsadida, davom etishdan oldin yangi parol o'rnating.
+                        {t('force.subtitle')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="new-password" className="dark:text-gray-200">Yangi parol</Label>
+                            <Label htmlFor="new-password" className="dark:text-gray-200">{t('user.newPassword')}</Label>
                             <Input
                                 id="new-password"
                                 type="password"
@@ -67,7 +69,7 @@ export function ForceChangePassword() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="confirm-password" className="dark:text-gray-200">Parolni tasdiqlang</Label>
+                            <Label htmlFor="confirm-password" className="dark:text-gray-200">{t('user.confirmPassword')}</Label>
                             <Input
                                 id="confirm-password"
                                 type="password"
@@ -78,7 +80,7 @@ export function ForceChangePassword() {
                             />
                         </div>
                         <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800">
-                            Saqlash va davom etish
+                            {t('force.submit')}
                         </Button>
                     </form>
                 </CardContent>

@@ -15,8 +15,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from './ui/dialog';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useT } from '../contexts/LanguageContext';
 
 export function UserLogin() {
+    const { t } = useT();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -29,7 +32,7 @@ export function UserLogin() {
         e.preventDefault();
 
         if (!acceptedTerms) {
-            toast.error('Iltimos, foydalanish shartlarini qabul qiling');
+            toast.error(t('toast.acceptTerms'));
             return;
         }
 
@@ -47,19 +50,22 @@ export function UserLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200 relative">
+            <div className="absolute top-4 right-4">
+                <LanguageSwitcher />
+            </div>
             <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border dark:border-gray-700">
                 <div className="text-center mb-8">
                     <div className="mx-auto w-16 h-16 aspect-square bg-white rounded-xl flex items-center justify-center p-2 shadow-md border mb-4">
                         <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Markaziy Agrobank</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Xodimlar uchun kirish</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('app.brand')}</h1>
+                    <p className="text-gray-500 dark:text-gray-400">{t('login.title')}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="username" className="dark:text-gray-200">Login</Label>
+                        <Label htmlFor="username" className="dark:text-gray-200">{t('login.username')}</Label>
                         <Input
                             id="username"
                             type="text"
@@ -72,7 +78,7 @@ export function UserLogin() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="password" className="dark:text-gray-200">Parol</Label>
+                        <Label htmlFor="password" className="dark:text-gray-200">{t('login.password')}</Label>
                         <Input
                             id="password"
                             type="password"
@@ -133,7 +139,7 @@ export function UserLogin() {
                         className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-800"
                         disabled={isLoading || !acceptedTerms}
                     >
-                        {isLoading ? 'Kirilmoqda...' : 'Kirish'}
+                        {isLoading ? t('login.submitting') : t('login.submit')}
                     </Button>
                 </form>
             </div>

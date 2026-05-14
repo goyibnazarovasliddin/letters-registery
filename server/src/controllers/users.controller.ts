@@ -57,9 +57,14 @@ export const createUser = async (req: Request, res: Response) => {
 
         const data = schema.parse(req.body);
 
+        data.username = data.username.trim();
+        if (data.username.length < 3) {
+            return res.status(400).json({ message: 'Login juda qisqa (kamida 3 belgi)' });
+        }
+
         const existing = await prisma.user.findUnique({ where: { username: data.username } });
         if (existing) {
-            return res.status(400).json({ message: 'Username already exists' });
+            return res.status(400).json({ message: 'Bunday login allaqachon mavjud' });
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -82,11 +87,26 @@ export const createUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { password, ...data } = req.body;
+        const { password, username, ...data } = req.body;
 
         const updateData: any = { ...data };
         if (password && password.length >= 6) {
             updateData.password = await bcrypt.hash(password, 10);
+            updateData.tokenVersion = { increment: 1 };
+        }
+
+        if (username) {
+            const trimmed = String(username).trim();
+            if (trimmed.length < 3) {
+                return res.status(400).json({ message: 'Login juda qisqa (kamida 3 belgi)' });
+            }
+            const dup = await prisma.user.findFirst({
+                where: { username: trimmed, NOT: { id } }
+            });
+            if (dup) {
+                return res.status(400).json({ message: 'Bunday login allaqachon mavjud' });
+            }
+            updateData.username = trimmed;
             updateData.tokenVersion = { increment: 1 };
         }
 

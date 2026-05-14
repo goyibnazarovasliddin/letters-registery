@@ -17,9 +17,11 @@ import {
     DialogTrigger,
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
+import { useT } from '../contexts/LanguageContext';
 
 export function UserProfile() {
     const { user } = useUser();
+    const { t } = useT();
     const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,22 +31,22 @@ export function UserProfile() {
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newPassword.length < 5) {
-            toast.error('Parol kamida 5 ta belgidan iborat bo\'lishi kerak');
+            toast.error(t('toast.passwordShort'));
             return;
         }
         if (newPassword !== confirmPassword) {
-            toast.error('Parollar mos kelmadi');
+            toast.error(t('toast.passwordMismatch'));
             return;
         }
 
         try {
             await api.auth.changePassword(newPassword);
-            toast.success('Parol muvaffaqiyatli o\'zgartirildi');
+            toast.success(t('toast.passwordChanged'));
             setOpenPasswordDialog(false);
             setNewPassword('');
             setConfirmPassword('');
         } catch (e) {
-            toast.error('Xatolik yuz berdi');
+            toast.error(t('toast.genericError'));
         }
     };
 
@@ -52,8 +54,8 @@ export function UserProfile() {
         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold">Mening Profilim</h2>
-                    <p className="text-gray-500 text-sm">Shaxsiy ma'lumotlar va sozlamalar</p>
+                    <h2 className="text-2xl font-bold">{t('user.profileTitle')}</h2>
+                    <p className="text-gray-500 text-sm">{t('user.profileSubtitle')}</p>
                 </div>
             </div>
 
@@ -73,7 +75,7 @@ export function UserProfile() {
                         <div className="mb-4 flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-gray-700">
                             <div className={`w-3 h-3 rounded-full ${user.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {user.status === 'active' ? 'Faol' : 'Nofaol'}
+                                {user.status === 'active' ? t('user.active') : t('user.inactive')}
                             </span>
                         </div>
                     </div>
@@ -82,22 +84,22 @@ export function UserProfile() {
                         <div className="space-y-4">
                             <h4 className="font-semibold flex items-center gap-2 dark:text-gray-200">
                                 <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                Tizim ma'lumotlari
+                                {t('user.systemInfo')}
                             </h4>
                             <div className="space-y-3 text-sm">
                                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-500 dark:text-gray-400">Login</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('users.login')}</span>
                                     <span className="font-medium dark:text-gray-200">{user.username}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-500 dark:text-gray-400">Rol</span>
-                                    <span className="capitalize dark:text-gray-200">Ijrochi</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('user.role')}</span>
+                                    <span className="capitalize dark:text-gray-200">{t('user.roleExecutor')}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-500 dark:text-gray-400">Holati</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('common.status')}</span>
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                        <p className="font-medium capitalize dark:text-gray-200">{user.status === 'active' ? 'Faol' : 'Nofaol'}</p>
+                                        <p className="font-medium capitalize dark:text-gray-200">{user.status === 'active' ? t('user.active') : t('user.inactive')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -106,35 +108,35 @@ export function UserProfile() {
                         <div className="space-y-4">
                             <h4 className="font-semibold flex items-center gap-2 dark:text-gray-200">
                                 <Key className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                                Xavfsizlik
+                                {t('user.security')}
                             </h4>
                             <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg space-y-3">
-                                <p className="text-sm text-orange-800 dark:text-orange-300">Parolingizni muntazam yangilab turish tavsiya etiladi.</p>
+                                <p className="text-sm text-orange-800 dark:text-orange-300">{t('user.passwordTip')}</p>
 
                                 <Dialog open={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm" className="w-full bg-white dark:bg-gray-800 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:text-orange-800">
-                                            Parolni o'zgartirish
+                                            {t('user.changePassword')}
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Parolni o'zgartirish</DialogTitle>
+                                            <DialogTitle>{t('user.changePassword')}</DialogTitle>
                                             <DialogDescription>
-                                                Yangi parolni kiriting. Kamida 5 ta belgi bo'lishi kerak.
+                                                {t('user.changePasswordDesc')}
                                             </DialogDescription>
                                         </DialogHeader>
                                         <form onSubmit={handlePasswordChange} className="space-y-4 py-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="new">Yangi parol</Label>
+                                                <Label htmlFor="new">{t('user.newPassword')}</Label>
                                                 <Input id="new" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="confirm">Parolni tasdiqlang</Label>
+                                                <Label htmlFor="confirm">{t('user.confirmPassword')}</Label>
                                                 <Input id="confirm" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                                             </div>
                                             <DialogFooter>
-                                                <Button type="submit" className="bg-green-600 hover:bg-green-700">Saqlash</Button>
+                                                <Button type="submit" className="bg-green-600 hover:bg-green-700">{t('common.save')}</Button>
                                             </DialogFooter>
                                         </form>
                                     </DialogContent>

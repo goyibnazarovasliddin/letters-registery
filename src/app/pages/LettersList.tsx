@@ -17,6 +17,8 @@ import { Search, Plus, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { formatDateTime } from '../utils/formatters';
+import { TableSkeleton } from '../components/ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 
 export function LettersList() {
     const [letters, setLetters] = useState<LetterDTO[]>([]);
@@ -28,6 +30,7 @@ export function LettersList() {
     const [year, setYear] = useState(new Date().getFullYear().toString());
     const [totalPages, setTotalPages] = useState(1);
     const navigate = useNavigate();
+    const { t } = useT();
 
     useEffect(() => {
         fetchLetters();
@@ -41,7 +44,7 @@ export function LettersList() {
             setTotalPages(res.meta.totalPages);
         } catch (e) {
             // Only show error toast if not silent or first load, to avoid spamming toasts
-            if (!silent) toast.error('Xatlarni yuklashda xatolik');
+            if (!silent) toast.error(t('toast.lettersLoadError'));
         } finally {
             if (!silent) setLoading(false);
         }
@@ -70,12 +73,12 @@ export function LettersList() {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Xatlar</h2>
-                    <p className="text-gray-500 text-sm">Chiquvchi xatlar ro'yxati</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('lettersList.title')}</h2>
+                    <p className="text-gray-500 text-sm">{t('lettersList.sub')}</p>
                 </div>
-                <Button onClick={() => navigate('/letters/new')} className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 transition-all hover:scale-105">
+                <Button onClick={() => navigate('/letters/new')} className="bg-green-600 hover:bg-green-700 text-white dark:text-white">
                     <Plus className="w-4 h-4 mr-2" />
-                    Yangi xat
+                    {t('lettersList.newLetter')}
                 </Button>
             </div>
 
@@ -84,7 +87,7 @@ export function LettersList() {
                     <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
-                            placeholder="Xat raqami, indeks kodi, mavzu yoki qabul qiluvchi bo'yicha qidirish..."
+                            placeholder={t('common.search')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="pl-10 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
@@ -92,17 +95,17 @@ export function LettersList() {
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Holati bo'yicha" />
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Barcha holatlar</SelectItem>
-                            <SelectItem value="DRAFT">Qoralamalar</SelectItem>
-                            <SelectItem value="REGISTERED">Ro'yxatga olingan</SelectItem>
+                            <SelectItem value="all">{t('lettersList.filter.all')}</SelectItem>
+                            <SelectItem value="DRAFT">{t('lettersList.filter.draft')}</SelectItem>
+                            <SelectItem value="REGISTERED">{t('lettersList.filter.registered')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select value={year} onValueChange={setYear}>
                         <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Yil" />
+                            <SelectValue placeholder={t('letter.year')} />
                         </SelectTrigger>
                         <SelectContent className="max-h-[200px]">
                             <SelectItem value={new Date().getFullYear().toString()}>{new Date().getFullYear()}</SelectItem>
@@ -113,7 +116,7 @@ export function LettersList() {
                     </Select>
                     <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
                         <SelectTrigger className="w-[80px]">
-                            <SelectValue placeholder="Soni" />
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="10">10</SelectItem>
@@ -128,11 +131,8 @@ export function LettersList() {
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 {loading ? (
-                    <div className="p-8 text-center space-y-4">
-                        <div className="animate-pulse flex flex-col items-center">
-                            <div className="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-                            <div className="h-4 w-32 bg-gray-200 rounded"></div>
-                        </div>
+                    <div className="p-4">
+                        <TableSkeleton rows={5} cols={7} />
                     </div>
                 ) : (
                     <div className="w-full overflow-hidden border rounded-lg bg-white dark:bg-gray-900">
@@ -140,23 +140,23 @@ export function LettersList() {
                             <Table className="min-w-[800px]">
                                 <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                                     <TableRow>
-                                        <TableHead className="w-12 text-center">№</TableHead>
-                                        <TableHead>Xat raqami</TableHead>
-                                        <TableHead>Ro‘yxatga olingan vaqt</TableHead>
-                                        <TableHead>Sana</TableHead>
-                                        <TableHead>Mavzu</TableHead>
-                                        <TableHead>Mazmuni</TableHead>
-                                        <TableHead>Qabul qiluvchi</TableHead>
-                                        <TableHead className="text-center">Xat varaqlari</TableHead>
-                                        <TableHead className="text-center">Ilova varaqlari</TableHead>
-                                        <TableHead>Holati</TableHead>
+                                        <TableHead className="w-12 text-center">{t('common.no')}</TableHead>
+                                        <TableHead>{t('letter.number')}</TableHead>
+                                        <TableHead>{t('letter.registeredAt')}</TableHead>
+                                        <TableHead>{t('letter.date')}</TableHead>
+                                        <TableHead>{t('letter.subject')}</TableHead>
+                                        <TableHead>{t('letter.summary')}</TableHead>
+                                        <TableHead>{t('letter.recipient')}</TableHead>
+                                        <TableHead className="text-center">{t('letter.pageCount')}</TableHead>
+                                        <TableHead className="text-center">{t('letter.attachmentPageCount')}</TableHead>
+                                        <TableHead>{t('common.status')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {letters.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                                                Xatlar topilmadi
+                                                {t('letter.notFound')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -171,7 +171,7 @@ export function LettersList() {
                                                     {letter.letterNumber ? (
                                                         <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
                                                     ) : (
-                                                        <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
+                                                        <span className="text-gray-400 italic text-xs">{t('letter.notRegistered')}</span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
@@ -187,7 +187,7 @@ export function LettersList() {
                                                 <TableCell className="text-center dark:text-gray-300">{letter.attachmentPageCount}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={letter.status === 'REGISTERED' ? 'default' : 'secondary'} className={letter.status === 'REGISTERED' ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"}>
-                                                        {letter.status === 'REGISTERED' ? 'Ro\'yxatga olingan' : 'Qoralama'}
+                                                        {letter.status === 'REGISTERED' ? t('lettersList.filter.registered') : t('lettersList.filter.draft')}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -207,10 +207,10 @@ export function LettersList() {
                         onClick={() => setPage(p => p - 1)}
                         className="text-gray-500"
                     >
-                        <ChevronLeft className="w-4 h-4 mr-2" /> Oldingi
+                        <ChevronLeft className="w-4 h-4 mr-2" /> {t('common.previous')}
                     </Button>
                     <span className="text-sm text-gray-500">
-                        Sahifa {page} / {totalPages}
+                        {t('common.page')} {page} / {totalPages}
                     </span>
                     <Button
                         variant="ghost"
@@ -218,7 +218,7 @@ export function LettersList() {
                         onClick={() => setPage(p => p + 1)}
                         className="text-gray-500"
                     >
-                        Keyingi <ChevronRight className="w-4 h-4 ml-2" />
+                        {t('common.next')} <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>
             </div>

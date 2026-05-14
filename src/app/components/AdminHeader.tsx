@@ -12,10 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useT } from '../contexts/LanguageContext';
 
 export function AdminHeader() {
   const { adminName, logout } = useAdmin();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useT();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 shadow-sm">
@@ -25,12 +28,13 @@ export function AdminHeader() {
             <img src={agrobankLogo} alt="Agrobank Logo" className="w-full h-full object-contain" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="font-semibold text-base md:text-lg leading-tight">Markaziy Agrobank</h1>
-            <p className="text-xs text-gray-500">Admin Panel</p>
+            <h1 className="font-semibold text-base md:text-lg leading-tight">{t('app.brand')}</h1>
+            <p className="text-xs text-gray-500">{t('app.adminPanel')}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <LanguageSwitcher />
           <Button
             variant="ghost"
             size="icon"
@@ -52,16 +56,14 @@ export function AdminHeader() {
                 </div>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-medium">{adminName}</p>
-                  <p className="text-xs text-gray-500">Administrator</p>
+                  <p className="text-xs text-gray-500">{t('common.administrator')}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Mening hisobim</DropdownMenuLabel>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
                 <LogOut className="mr-2 w-4 h-4" />
-                Chiqish
+                {t('common.signOut')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

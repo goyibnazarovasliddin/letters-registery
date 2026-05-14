@@ -5,6 +5,7 @@ import { formatDateTime } from '../utils/formatters';
 import { FileText, Send, CheckCircle, Clock } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
+import { useT } from '../contexts/LanguageContext';
 
 import { Badge } from '../components/ui/badge';
 
@@ -27,6 +28,7 @@ import {
 export function UserDashboard() {
     const { user } = useUser();
     const navigate = useNavigate();
+    const { t } = useT();
     const [stats, setStats] = useState({
         total: 0,
         registered: 0,
@@ -55,16 +57,16 @@ export function UserDashboard() {
     };
 
     const statCards = [
-        { label: 'Jami xatlar', value: stats.total, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-        { label: 'Ro\'yxatga olingan', value: stats.registered, icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30' },
-        { label: 'Qoralamalar', value: stats.drafts, icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+        { label: t('dashboard.totalLetters'), value: stats.total, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+        { label: t('lettersList.filter.registered'), value: stats.registered, icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30' },
+        { label: t('lettersList.filter.draft'), value: stats.drafts, icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
     ];
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Xush kelibsiz, {user?.fullName}</h2>
-                <p className="text-gray-500 text-sm">Bugungi ko'rsatkichlaringiz</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('user.welcome')}, {user?.fullName}</h2>
+                <p className="text-gray-500 text-sm">{t('dashboard.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -84,12 +86,12 @@ export function UserDashboard() {
             </div>
 
             <div className="flex items-center justify-between mt-8 mb-4">
-                <h3 className="text-lg font-semibold">So'nggi xatlar</h3>
+                <h3 className="text-lg font-semibold">{t('dashboard.recents')}</h3>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">Soni:</span>
+                    <span className="text-sm text-gray-500">{t('common.count')}</span>
                     <Select value={limit.toString()} onValueChange={(v: string) => setLimit(Number(v))}>
                         <SelectTrigger className="w-[80px] h-8">
-                            <SelectValue placeholder="Soni" />
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="5">5</SelectItem>
@@ -104,21 +106,21 @@ export function UserDashboard() {
                 <Table>
                     <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                         <TableRow>
-                            <TableHead className="w-12 text-center">№</TableHead>
-                            <TableHead>Xat raqami</TableHead>
-                            <TableHead>Ro‘yxatga olingan vaqt</TableHead>
-                            <TableHead>Sana</TableHead>
-                            <TableHead>Indeks</TableHead>
-                            <TableHead>Yuborilgan manzil</TableHead>
-                            <TableHead>Mavzu</TableHead>
-                            <TableHead>Holati</TableHead>
+                            <TableHead className="w-12 text-center">{t('common.no')}</TableHead>
+                            <TableHead>{t('letter.number')}</TableHead>
+                            <TableHead>{t('letter.registeredAt')}</TableHead>
+                            <TableHead>{t('letter.date')}</TableHead>
+                            <TableHead>{t('letter.index')}</TableHead>
+                            <TableHead>{t('letter.recipient')}</TableHead>
+                            <TableHead>{t('letter.subject')}</TableHead>
+                            <TableHead>{t('common.status')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {stats.recentLetters.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                                    Xatlar topilmadi
+                                    {t('letter.notFound')}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -133,7 +135,7 @@ export function UserDashboard() {
                                         {letter.letterNumber ? (
                                             <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
                                         ) : (
-                                            <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
+                                            <span className="text-gray-400 italic text-xs">{t('letter.notRegistered')}</span>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono">
@@ -151,7 +153,7 @@ export function UserDashboard() {
                                     <TableCell className="max-w-xs truncate dark:text-gray-300">{letter.subject}</TableCell>
                                     <TableCell>
                                         <Badge variant={letter.status === 'REGISTERED' ? 'default' : 'secondary'} className={letter.status === 'REGISTERED' ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"}>
-                                            {letter.status === 'REGISTERED' ? 'Ro\'yxatga olingan' : 'Qoralama'}
+                                            {letter.status === 'REGISTERED' ? t('lettersList.filter.registered') : t('lettersList.filter.draft')}
                                         </Badge>
                                     </TableCell>
                                 </TableRow>

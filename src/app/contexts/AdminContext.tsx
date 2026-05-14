@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Index, Letter, Credentials, Department } from '../types/admin';
 import { api } from '../services/api/client';
 import { toast } from 'sonner';
+import { useT } from './LanguageContext';
 
 interface AdminContextType {
   isAuthenticated: boolean;
@@ -12,9 +13,10 @@ interface AdminContextType {
   departments: Department[];
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  createUser: (fish: string, lavozimi: string, departmentId: string) => Promise<Credentials | null>;
+  createUser: (fish: string, lavozimi: string, departmentId: string, username?: string) => Promise<Credentials | null>;
   resetUserPassword: (userId: string) => Promise<string>;
   toggleUserStatus: (userId: string) => void;
+  updateUsername: (userId: string, newUsername: string) => Promise<boolean>;
   addIndex: (code: string, name: string) => Promise<void>;
   updateIndex: (id: string, code: string, name: string) => Promise<void>;
   archiveIndex: (id: string) => void;
@@ -24,6 +26,7 @@ interface AdminContextType {
   archiveDepartment: (id: string) => void;
   activateDepartment: (id: string) => void;
   deleteUser: (id: string) => Promise<void>;
+  deleteLetter: (id: string) => Promise<boolean>;
   restoreUser: (id: string) => void;
   deleteIndex: (id: string) => Promise<void>;
   restoreIndex: (id: string) => void;
@@ -33,6 +36,7 @@ interface AdminContextType {
   permanentDeleteIndex: (id: string) => void;
   permanentDeleteDepartment: (id: string) => void;
   refreshData: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
@@ -46,10 +50,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     return 'Administrator';
   });
 
+  const { t } = useT();
   const [users, setUsers] = useState<User[]>([]);
   const [indices, setIndices] = useState<Index[]>([]);
   const [letters, setLetters] = useState<Letter[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const isLoading = isAuthenticated && !hasLoadedOnce;
 
   const refreshData = async () => {
     try {
@@ -91,6 +98,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         userFish: letter.userFish,
         userPosition: letter.userPosition || 'Lavozim kiritilmagan',
         createdDate: letter.createdDate,
+        updatedDate: letter.updatedDate,
+        registeredAt: letter.registeredAt,
         files: letter.files, // Keep raw files if needed, or:
         xatFile: letter.files?.xat?.fileName,
         xatFileId: letter.files?.xat?.id,
@@ -101,6 +110,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     } catch (e) {
       console.error("Failed to fetch admin data", e);
+    } finally {
+      setHasLoadedOnce(true);
     }
   };
 
@@ -114,7 +125,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.auth.login(username, password);
       if (res.user.role !== 'admin') {
-        toast.error('Faqat administratorlar kirishi mumkin');
+        toast.error(t('toast.adminOnly'));
         return false;
       }
       localStorage.setItem('admin_token', res.accessToken);
@@ -122,21 +133,23 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       refreshData();
       return true;
     } catch (e) {
-      toast.error('Login yoki parol xato');
+      toast.error(t('toast.loginError'));
       return false;
     }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    setHasLoadedOnce(false);
     localStorage.removeItem('admin_token');
   };
 
-  const createUser = async (fish: string, lavozimi: string, departmentId: string): Promise<Credentials | null> => {
+  const createUser = async (fish: string, lavozimi: string, departmentId: string, customUsername?: string): Promise<Credentials | null> => {
     try {
-      // Generate temporary credentials
-      const username = fish.split(' ')[0].toLowerCase() + Math.floor(Math.random() * 100);
-      const password = 'Password@123'; // Temporary
+      const username = (customUsername && customUsername.trim())
+        ? customUsername.trim()
+        : fish.split(' ')[0].toLowerCase() + Math.floor(Math.random() * 100);
+      const password = 'Password@123';
 
       await api.users.create({
         username,
@@ -149,9 +162,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       await refreshData();
       return { username, password };
-    } catch (e) {
-      toast.error('Foydalanuvchi yaratishda xatolik');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Foydalanuvchi yaratishda xatolik';
+      toast.error(msg);
       return null;
+    }
+  };
+
+  const updateUsername = async (userId: string, newUsername: string): Promise<boolean> => {
+    try {
+      await api.users.update(userId, { username: newUsername });
+      await refreshData();
+      return true;
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Loginni o\'zgartirishda xatolik';
+      toast.error(msg);
+      return false;
     }
   };
 
@@ -160,7 +186,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.create({ code, name });
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -169,7 +195,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.update(id, { code, name });
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -178,7 +204,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.delete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -187,7 +213,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.create({ name, description });
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -196,7 +222,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.update(id, { name, description });
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -205,7 +231,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.delete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
     }
   };
 
@@ -214,7 +240,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.users.delete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Xatolik");
+      toast.error(t('toast.genericError'));
+    }
+  };
+
+  const deleteLetter = async (id: string): Promise<boolean> => {
+    try {
+      await api.letters.delete(id);
+      await refreshData();
+      return true;
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Xatni o\'chirishda xatolik';
+      toast.error(msg);
+      return false;
     }
   };
 
@@ -228,7 +266,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const response = await api.users.resetPassword(userId);
       return response.newPassword;
     } catch (e) {
-      toast.error("Parolni yangilashda xatolik");
+      toast.error(t('toast.passwordResetError'));
       return "";
     }
   };
@@ -241,7 +279,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.users.updateStatus(userId, newStatus);
       await refreshData();
     } catch (e) {
-      toast.error("Statusni o'zgartirishda xatolik");
+      toast.error(t('toast.statusChangeError'));
     }
   };
 
@@ -250,7 +288,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.users.updateStatus(id, 'active');
       await refreshData();
     } catch (e) {
-      toast.error("Foydalanuvchini tiklashda xatolik");
+      toast.error(t('toast.restoreError'));
     }
   };
 
@@ -259,7 +297,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.users.permanentDelete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Butunlay o'chirishda xatolik");
+      toast.error(t('toast.permanentDeleteError'));
     }
   };
 
@@ -268,7 +306,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.updateStatus(id, 'archived');
       await refreshData();
     } catch (e) {
-      toast.error("Arxivlashda xatolik");
+      toast.error(t('toast.archiveError'));
     }
   };
 
@@ -277,7 +315,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.updateStatus(id, 'active');
       await refreshData();
     } catch (e) {
-      toast.error("Faollashtirishda xatolik");
+      toast.error(t('toast.activateError'));
     }
   };
 
@@ -286,7 +324,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.updateStatus(id, 'active');
       await refreshData();
     } catch (e) {
-      toast.error("Tiklashda xatolik");
+      toast.error(t('toast.restoreError'));
     }
   };
 
@@ -295,7 +333,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.indices.permanentDelete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Butunlay o'chirishda xatolik");
+      toast.error(t('toast.permanentDeleteError'));
     }
   };
 
@@ -304,7 +342,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.updateStatus(id, 'archived');
       await refreshData();
     } catch (e) {
-      toast.error("Arxivlashda xatolik");
+      toast.error(t('toast.archiveError'));
     }
   };
 
@@ -313,7 +351,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.updateStatus(id, 'active');
       await refreshData();
     } catch (e) {
-      toast.error("Faollashtirishda xatolik");
+      toast.error(t('toast.activateError'));
     }
   };
 
@@ -322,7 +360,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.updateStatus(id, 'active');
       await refreshData();
     } catch (e) {
-      toast.error("Tiklashda xatolik");
+      toast.error(t('toast.restoreError'));
     }
   };
 
@@ -331,7 +369,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       await api.departments.permanentDelete(id);
       await refreshData();
     } catch (e) {
-      toast.error("Butunlay o'chirishda xatolik");
+      toast.error(t('toast.permanentDeleteError'));
     }
   };
 
@@ -348,6 +386,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       createUser,
       resetUserPassword,
       toggleUserStatus,
+      updateUsername,
       addIndex,
       updateIndex,
       archiveIndex,
@@ -357,6 +396,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       archiveDepartment,
       activateDepartment,
       deleteUser,
+      deleteLetter,
       restoreUser,
       deleteIndex,
       restoreIndex,
@@ -365,7 +405,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       permanentDeleteUser,
       permanentDeleteIndex,
       permanentDeleteDepartment,
-      refreshData
+      refreshData,
+      isLoading
     }}>
       {children}
     </AdminContext.Provider>

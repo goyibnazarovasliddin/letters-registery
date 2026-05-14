@@ -2,6 +2,90 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { z } from 'zod';
 
+// Generate a letter number based on letterDate.
+// Numbers are computed from existing DB rows so deletion naturally frees them up:
+// the next letter takes the lowest-free sequence (max+1) after re-scanning.
+// - letterDate is today or later: yearly sequence "<indexCode>/<seq>"
+// - letterDate is in the past: slot under the closest prior day's last letter -> "<baseLetterNumber>-<N>"
+async function generateLetterNumber(tx: any, letterDate: string, indexCode: string): Promise<string> {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const yearlySequence = async () => {
+        const yearStr = letterDate.split('-')[0];
+        // Scan all REGISTERED letters in the same year, find max plain sequence (no -N suffix)
+        const yearLetters = await tx.letter.findMany({
+            where: {
+                letterDate: { startsWith: yearStr },
+                status: 'REGISTERED',
+                letterNumber: { not: null }
+            },
+            select: { letterNumber: true }
+        });
+        let maxSeq = 0;
+        for (const l of yearLetters) {
+            const num = l.letterNumber as string;
+            // Match "<anything>/<digits>" exactly (no -N suffix)
+            const m = num.match(/^.+\/(\d+)$/);
+            if (m) {
+                const s = parseInt(m[1], 10);
+                if (s > maxSeq) maxSeq = s;
+            }
+        }
+        return `${indexCode}/${maxSeq + 1}`;
+    };
+
+    if (letterDate >= todayStr) {
+        return yearlySequence();
+    }
+
+    // Past-date insertion: find the closest registered letter on or before this date
+    const base = await tx.letter.findFirst({
+        where: {
+            letterDate: { lte: letterDate },
+            status: 'REGISTERED',
+            letterNumber: { not: null }
+        },
+        orderBy: [
+            { letterDate: 'desc' },
+            { registeredAt: 'desc' },
+            { id: 'desc' }
+        ]
+    });
+
+    if (!base || !base.letterNumber) {
+        return yearlySequence();
+    }
+
+    // Strip any trailing "-<digits>" suffix to get the base number
+    let basePart = base.letterNumber;
+    const dashIdx = basePart.lastIndexOf('-');
+    if (dashIdx > 0) {
+        const tail = basePart.slice(dashIdx + 1);
+        if (/^\d+$/.test(tail)) {
+            basePart = basePart.slice(0, dashIdx);
+        }
+    }
+
+    // Find the highest existing -N suffix for this base
+    const prefix = `${basePart}-`;
+    const siblings = await tx.letter.findMany({
+        where: { letterNumber: { startsWith: prefix } },
+        select: { letterNumber: true }
+    });
+
+    let maxN = 0;
+    for (const s of siblings) {
+        const num = s.letterNumber as string;
+        const rest = num.slice(prefix.length);
+        if (/^\d+$/.test(rest)) {
+            const n = parseInt(rest, 10);
+            if (n > maxN) maxN = n;
+        }
+    }
+
+    return `${basePart}-${maxN + 1}`;
+}
+
 const formatLetter = (l: any) => {
     if (!l) return null;
 
@@ -207,17 +291,7 @@ export const createLetter = async (req: Request, res: Response) => {
                 const l = await tx.letter.findUnique({ where: { id: letter.id }, include: { index: true } });
                 if (!l) throw new Error("Letter lost");
 
-                const yearStr = l.letterDate.split('-')[0];
-                const targetYear = parseInt(yearStr, 10);
-
-                const counter = await tx.yearCounter.upsert({
-                    where: { year: targetYear },
-                    update: { lastSequence: { increment: 1 } },
-                    create: { year: targetYear, lastSequence: 1 }
-                });
-
-                const sequence = counter.lastSequence;
-                const letterNumber = `${l.index?.code}/${sequence}`;
+                const letterNumber = await generateLetterNumber(tx, l.letterDate, l.index?.code || '');
 
                 return await tx.letter.update({
                     where: { id: l.id },
@@ -347,17 +421,7 @@ export const updateLetter = async (req: Request, res: Response) => {
                 const l = await tx.letter.findUnique({ where: { id: updated.id }, include: { index: true } });
                 if (!l) throw new Error("Letter lost");
 
-                const yearStr = l.letterDate.split('-')[0];
-                const targetYear = parseInt(yearStr, 10);
-
-                const counter = await tx.yearCounter.upsert({
-                    where: { year: targetYear },
-                    update: { lastSequence: { increment: 1 } },
-                    create: { year: targetYear, lastSequence: 1 }
-                });
-
-                const sequence = counter.lastSequence;
-                const letterNumber = `${l.index?.code}/${sequence}`;
+                const letterNumber = await generateLetterNumber(tx, l.letterDate, l.index?.code || '');
 
                 return await tx.letter.update({
                     where: { id: l.id },
@@ -411,37 +475,13 @@ export const registerLetter = async (req: Request, res: Response) => {
                 return letter; // Already registered, just return it
             }
 
-            // Determine Year from letterDate logic
-            // Requirements: 
-            // - targetYear = year(letterDate)
-            // - letterDate is "YYYY-MM-DD"
-            const yearStr = letter.letterDate.split('-')[0];
-            const targetYear = parseInt(yearStr, 10);
-
+            const targetYear = parseInt(letter.letterDate.split('-')[0], 10);
             if (isNaN(targetYear)) {
                 throw new Error('INVALID_DATE');
             }
 
-            console.log(`[Register] Generating number for Year: ${targetYear}, Index: ${letter.index.code}`);
-
-            // Atomic Sequence Generation
-            // Upsert year counter: if exists, increment; if not, create with 1 (lastSequence will be 1 after increment? No, create with 0 then increment, strictly.)
-            // Actually, usually we want: get current, increment, save.
-            // Using upsert to initialize if missing.
-
-            // We need to lock or ensure atomic update.
-            // SQLite doesn't support SELECT ... FOR UPDATE easily in Prisma without raw query, 
-            // but we can use atomic update: increment.
-
-            const counter = await tx.yearCounter.upsert({
-                where: { year: targetYear },
-                update: { lastSequence: { increment: 1 } },
-                create: { year: targetYear, lastSequence: 1 }
-            });
-
-            const sequence = counter.lastSequence;
-            const letterNumber = `${letter.index.code}/${sequence}`;
-            console.log(`[Register] Generated Sequence: ${sequence}, LetterNumber: ${letterNumber}`);
+            const letterNumber = await generateLetterNumber(tx, letter.letterDate, letter.index.code);
+            console.log(`[Register] Generated LetterNumber: ${letterNumber} for date ${letter.letterDate}`);
 
             // Update letter
             const updated = await tx.letter.update({
@@ -500,6 +540,86 @@ export const getLetter = async (req: Request, res: Response) => {
         res.json(formatLetter(letter));
     } catch (e) {
         res.status(500).json({ message: 'Error fetching letter' });
+    }
+};
+
+export const deleteLetter = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const user = (req as any).user;
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'Faqat administrator o\'chira oladi' });
+        }
+
+        const letter = await prisma.letter.findUnique({ where: { id }, include: { files: true } });
+        if (!letter) return res.status(404).json({ message: 'Xat topilmadi' });
+
+        const fs = await import('fs');
+        for (const f of letter.files) {
+            try { fs.unlinkSync(f.path); } catch (err) { /* ignore missing files */ }
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.file.deleteMany({ where: { letterId: id } });
+            await tx.letter.delete({ where: { id } });
+
+            // Free up the letter number so it can be reused.
+            // Year-sequence numbers ("<indexCode>/<seq>"): if this was the last
+            // sequence of its year, roll the year counter back by one.
+            // Past-date numbers ("<base>-<N>") reuse automatically via max-suffix scan.
+            if (letter.letterNumber) {
+                const seqMatch = letter.letterNumber.match(/\/(\d+)$/);
+                if (seqMatch) {
+                    const seq = parseInt(seqMatch[1], 10);
+                    const year = parseInt(letter.letterDate.split('-')[0], 10);
+                    const counter = await tx.yearCounter.findUnique({ where: { year } });
+                    if (counter && counter.lastSequence === seq) {
+                        await tx.yearCounter.update({
+                            where: { year },
+                            data: { lastSequence: { decrement: 1 } }
+                        });
+                    }
+                }
+            }
+        });
+
+        res.json({ message: 'Xat o\'chirildi' });
+    } catch (e) {
+        console.error('Delete letter error:', e);
+        res.status(500).json({ message: 'Xatni o\'chirishda xatolik' });
+    }
+};
+
+export const deleteFile = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const user = (req as any).user;
+
+        const file = await prisma.file.findUnique({
+            where: { id },
+            include: { letter: true }
+        });
+        if (!file) return res.status(404).json({ message: 'Fayl topilmadi' });
+
+        // Only owner (on DRAFT) or admin may delete
+        if (user.role !== 'admin') {
+            if (file.letter.userId !== user.id) {
+                return res.status(403).json({ message: 'Ruxsat yo\'q' });
+            }
+            if (file.letter.status !== 'DRAFT') {
+                return res.status(400).json({ message: 'Faqat qoralamadagi fayllarni o\'chirish mumkin' });
+            }
+        }
+
+        const fs = await import('fs');
+        try { fs.unlinkSync(file.path); } catch (err) { /* missing on disk: ignore */ }
+
+        await prisma.file.delete({ where: { id } });
+
+        res.json({ message: 'Fayl o\'chirildi' });
+    } catch (e) {
+        console.error('Delete file error:', e);
+        res.status(500).json({ message: 'Faylni o\'chirishda xatolik' });
     }
 };
 

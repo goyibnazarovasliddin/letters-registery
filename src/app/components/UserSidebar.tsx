@@ -8,33 +8,37 @@ import {
     SheetContent,
     SheetTrigger,
 } from './ui/sheet';
+import { useT } from '../contexts/LanguageContext';
 
 const menuItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { label: 'Yangi xat', icon: PlusCircle, path: '/letters/new' },
-    { label: 'Mening xatlarim', icon: FileText, path: '/letters' },
-    { label: 'Profil', icon: UserCircle, path: '/profile' },
+    { labelKey: 'nav.dashboard', icon: LayoutDashboard, path: '/' },
+    { labelKey: 'nav.newLetter', icon: PlusCircle, path: '/letters/new' },
+    { labelKey: 'nav.myLetters', icon: FileText, path: '/letters' },
+    { labelKey: 'nav.profile', icon: UserCircle, path: '/profile' },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+    const { t } = useT();
     return (
         <nav className="p-4 space-y-1">
-            {menuItems.map((item) => (
+            {menuItems.map((item, idx) => (
                 <NavLink
                     key={item.path}
                     to={item.path}
                     end={item.path === '/' || item.path === '/letters'}
                     onClick={onNavigate}
+                    style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}
                     className={({ isActive }) => cn(
                         "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
                         "text-left text-sm font-medium",
+                        "animate-in fade-in slide-in-from-left-4 duration-300",
                         isActive
                             ? "bg-green-600 text-white shadow-md transform translate-x-1"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:translate-x-1"
                     )}
                 >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey)}</span>
                 </NavLink>
             ))}
         </nav>

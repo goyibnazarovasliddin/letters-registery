@@ -54,13 +54,16 @@ import {
 } from './ui/select';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
+import { TableSkeleton } from './ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 
 interface IndicesManagementProps {
   initialAction?: string;
 }
 
 export function IndicesManagement({ initialAction }: IndicesManagementProps) {
-  const { indices, addIndex, updateIndex, archiveIndex, activateIndex, deleteIndex, restoreIndex, permanentDeleteIndex } = useAdmin();
+  const { indices, addIndex, updateIndex, archiveIndex, activateIndex, deleteIndex, restoreIndex, permanentDeleteIndex, isLoading } = useAdmin();
+  const { t } = useT();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived' | 'deleted'>('all');
   const [showAddModal, setShowAddModal] = useState(initialAction === 'create');
@@ -113,7 +116,7 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
     setShowAddModal(false);
     setCode('');
     setName('');
-    toast.success('Indeks qo\'shildi');
+    toast.success(t('toast.indexAdded'));
   };
 
   const handleEditIndex = (e: React.FormEvent) => {
@@ -125,7 +128,7 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
     setSelectedIndex(null);
     setCode('');
     setName('');
-    toast.success('Indeks yangilandi');
+    toast.success(t('toast.indexUpdated'));
   };
 
   const handleArchive = () => {
@@ -133,12 +136,12 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
     archiveIndex(selectedIndex.id);
     setShowArchiveDialog(false);
     setSelectedIndex(null);
-    toast.success('Indeks arxivlandi');
+    toast.success(t('toast.indexArchived'));
   };
 
   const handleActivate = (id: string) => {
     activateIndex(id);
-    toast.success('Indeks faollashtirildi');
+    toast.success(t('toast.indexActivated'));
   };
 
   const handleDeleteIndex = () => {
@@ -146,12 +149,12 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
     deleteIndex(selectedIndex.id);
     setShowDeleteDialog(false);
     setSelectedIndex(null);
-    toast.success('Indeks savatchaga o\'tkazildi');
+    toast.success(t('toast.indexMovedToTrash'));
   };
 
   const handleRestoreIndex = (id: string) => {
     restoreIndex(id);
-    toast.success('Indeks tiklandi');
+    toast.success(t('toast.indexRestored'));
   };
 
   const openEditModal = (index: { id: string; code: string; name: string }) => {
@@ -172,18 +175,18 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold mb-1">Indekslar</h2>
-          <p className="text-gray-500">Xat indekslarini boshqarish</p>
+          <h2 className="text-2xl font-semibold mb-1">{t('indices.title')}</h2>
+          <p className="text-gray-500">{t('nav.indices')}</p>
         </div>
         <Button
           className="bg-green-600 hover:bg-green-700"
           onClick={() => setShowAddModal(true)}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Indeks qo'shish
+          {t('dashboard.addIndex')}
         </Button>
       </div>
 
@@ -192,7 +195,7 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
-            placeholder="Kod yoki nom bo'yicha qidirish..."
+            placeholder={t('common.search')}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -203,11 +206,11 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <div className="flex items-center gap-2 mr-2">
-            <span className="text-sm text-gray-500 whitespace-nowrap">Soni:</span>
+            <span className="text-sm text-gray-500 whitespace-nowrap">{t('common.count')}</span>
             <div className="w-[80px]">
               <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Soni" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="10">10</SelectItem>
@@ -220,55 +223,61 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
             </div>
           </div>
           <Button
-            variant={statusFilter === 'all' ? 'default' : 'outline'}
+            variant="outline"
             onClick={() => { setStatusFilter('all'); setPage(1); }}
             size="sm"
+            className={statusFilter === 'all' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
           >
-            Barchasi
+            {t('common.all')}
           </Button>
           <Button
-            variant={statusFilter === 'active' ? 'default' : 'outline'}
+            variant="outline"
             onClick={() => { setStatusFilter('active'); setPage(1); }}
             size="sm"
+            className={statusFilter === 'active' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
           >
-            Faol
+            {t('common.active')}
           </Button>
           <Button
-            variant={statusFilter === 'archived' ? 'default' : 'outline'}
+            variant="outline"
             onClick={() => { setStatusFilter('archived'); setPage(1); }}
             size="sm"
+            className={statusFilter === 'archived' ? 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white dark:bg-green-600 dark:border-green-600 dark:text-white dark:hover:bg-green-700' : ''}
           >
-            Arxivlangan
+            {t('common.disabled')}
           </Button>
           <Button
-            variant={statusFilter === 'deleted' ? 'default' : 'outline'}
+            variant="outline"
             onClick={() => { setStatusFilter('deleted'); setPage(1); }}
             size="sm"
-            className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-200' : ''}
+            className={statusFilter === 'deleted' ? 'bg-orange-100 text-orange-900 hover:bg-orange-200 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800' : ''}
           >
             <Trash2 className="w-3 h-3 mr-2" />
-            Savatcha
+            {t('common.trash')}
           </Button>
         </div>
       </div>
 
       {/* Indices Table */}
+      {isLoading ? (
+        <TableSkeleton rows={6} cols={4} />
+      ) : (
       <div className="border rounded-lg bg-white dark:bg-gray-900">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12 text-center">№</TableHead>
-              <TableHead>Kod</TableHead>
-              <TableHead>Nomi</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Harakatlar</TableHead>
+              <TableHead className="w-12 text-center">{t('common.no')}</TableHead>
+              <TableHead>{t('indices.code')}</TableHead>
+              <TableHead>{t('departments.name')}</TableHead>
+              <TableHead className="w-[150px]">{t('common.status')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedIndices.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                  {statusFilter === 'deleted' ? 'Savatcha bo\'sh' : 'Indekslar topilmadi'}
+                  {statusFilter === 'deleted' ? t('users.trashEmpty') : t('common.notFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -279,15 +288,15 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
                   </TableCell>
                   <TableCell className="font-mono font-semibold">{index.code}</TableCell>
                   <TableCell>{index.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="w-[150px]">
                     {index.status === 'deleted' ? (
-                      <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
+                      <Badge variant="destructive" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200 justify-center w-[120px]">
                         <Trash2 className="w-3 h-3 mr-1" />
-                        O'chirilgan
+                        {t('common.deleted')}
                       </Badge>
                     ) : (
-                      <Badge variant={index.status === 'active' ? 'default' : 'secondary'}>
-                        {index.status === 'active' ? 'Faol' : 'Arxivlangan'}
+                      <Badge variant={index.status === 'active' ? 'default' : 'secondary'} className="justify-center w-[120px]">
+                        {index.status === 'active' ? t('common.active') : t('common.archived')}
                       </Badge>
                     )}
                   </TableCell>
@@ -303,36 +312,36 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
                           <>
                             <DropdownMenuItem onClick={() => handleRestoreIndex(index.id)}>
                               <RefreshCcw className="w-4 h-4 mr-2" />
-                              Tiklash
+                              {t('common.restore')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                if (window.confirm("Haqiqatdan ham bu indeksni butunlay o'chirmoqchimisiz?")) {
+                                if (window.confirm(t('dialog.permanentDeleteConfirm'))) {
                                   permanentDeleteIndex(index.id);
-                                  toast.success("Indeks butunlay o'chirildi");
+                                  toast.success(t('common.deleted'));
                                 }
                               }}
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Butunlay o'chirish
+                              {t('users.permanentDelete')}
                             </DropdownMenuItem>
                           </>
                         ) : (
                           <>
                             <DropdownMenuItem onClick={() => openEditModal(index)}>
                               <Edit2 className="w-4 h-4 mr-2" />
-                              Tahrirlash
+                              {t('common.edit')}
                             </DropdownMenuItem>
                             {index.status === 'active' ? (
                               <DropdownMenuItem onClick={() => openArchiveDialog(index)}>
                                 <Archive className="w-4 h-4 mr-2" />
-                                Arxivlash
+                                {t('common.archive')}
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem onClick={() => handleActivate(index.id)}>
                                 <Hash className="w-4 h-4 mr-2" />
-                                Faollashtirish
+                                {t('common.activate')}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
@@ -340,7 +349,7 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
                               className="text-red-600 focus:text-red-600 focus:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              O'chirish (Savatchaga)
+                              {t('users.moveToTrash')}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -360,36 +369,37 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
             disabled={page === 1}
             onClick={() => setPage(p => p - 1)}
           >
-            Oldingi
+            {t('common.previous')}
           </Button>
           <span className="text-sm text-gray-500">
-            Sahifa {page} / {totalPages || 1}
+            {t('common.page')} {page} / {totalPages || 1}
           </span>
           <Button
             variant="ghost"
             disabled={page >= totalPages}
             onClick={() => setPage(p => p + 1)}
           >
-            Keyingi
+            {t('common.next')}
           </Button>
         </div>
       </div>
+      )}
 
       {/* Add Index Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Yangi indeks qo'shish</DialogTitle>
+            <DialogTitle>{t('indices.add')}</DialogTitle>
             <DialogDescription>
-              Indeks kodi va nomini kiriting
+              {t('indices.namePlaceholder')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddIndex} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="code">Kod *</Label>
+              <Label htmlFor="code">{t('indices.code')} *</Label>
               <Input
                 id="code"
-                placeholder="01-01"
+                placeholder={t('indices.codePlaceholder')}
                 value={code}
                 onChange={(e) => {
                   setCode(e.target.value);
@@ -401,13 +411,13 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
               {codeError && (
                 <p className="text-sm text-red-500">{codeError}</p>
               )}
-              <p className="text-xs text-gray-500">Format: NN-NN (masalan: 01-01, 05-02)</p>
+              <p className="text-xs text-gray-500">Format: NN-NN (01-01, 05-02)</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">Nomi *</Label>
+              <Label htmlFor="name">{t('departments.name')} *</Label>
               <Input
                 id="name"
-                placeholder="Vazirliklar"
+                placeholder={t('indices.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -424,10 +434,10 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
                   setCodeError('');
                 }}
               >
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
               <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                Qo'shish
+                {t('common.add')}
               </Button>
             </div>
           </form>
@@ -438,17 +448,17 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Indeksni tahrirlash</DialogTitle>
+            <DialogTitle>{t('indices.edit')}</DialogTitle>
             <DialogDescription>
-              Indeks ma'lumotlarini yangilang
+              {t('indices.namePlaceholder')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditIndex} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-code">Kod *</Label>
+              <Label htmlFor="edit-code">{t('indices.code')} *</Label>
               <Input
                 id="edit-code"
-                placeholder="01-01"
+                placeholder={t('indices.codePlaceholder')}
                 value={code}
                 onChange={(e) => {
                   setCode(e.target.value);
@@ -462,10 +472,10 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nomi *</Label>
+              <Label htmlFor="edit-name">{t('departments.name')} *</Label>
               <Input
                 id="edit-name"
-                placeholder="Vazirliklar"
+                placeholder={t('indices.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -483,10 +493,10 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
                   setCodeError('');
                 }}
               >
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
               <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                Saqlash
+                {t('common.save')}
               </Button>
             </div>
           </form>
@@ -497,21 +507,20 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
       <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Indeksni arxivlash</AlertDialogTitle>
+            <AlertDialogTitle>{t('dialog.confirmArchive')}</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold">{selectedIndex?.code}</span> indeksni arxivlamoqchimisiz?
-              Arxivlangan indekslardan yangi xatlar uchun foydalanib bo'lmaydi.
+              {t('users.areYouSure')} <span className="font-semibold">{selectedIndex?.code}</span> {t('indices.archiveConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSelectedIndex(null)}>
-              Bekor qilish
+              {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleArchive}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              Arxivlash
+              {t('common.archive')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -523,21 +532,22 @@ export function IndicesManagement({ initialAction }: IndicesManagementProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-600">
               <TriangleAlert className="w-5 h-5" />
-              O'chirishni tasdiqlang
+              {t('dialog.confirmDelete')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 pt-2">
               <p>
-                Siz haqiqatdan ham <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedIndex?.code} - {selectedIndex?.name}</span> indeksini o'chirmoqchimisiz?
+                {t('users.areYouSure')} <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedIndex?.code} - {selectedIndex?.name}</span> {t('indices.deleteConfirm')}
               </p>
-              <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-md border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 text-sm">
-                ⚠️ O'chirilgan ma'lumotlar savatchaga tushadi va <strong>30 kundan keyin</strong> butunlay o'chib ketadi.
+              <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-md border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 text-sm flex items-start gap-2">
+                <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{t('dialog.deleteSoftWarning')}</span>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedIndex(null)}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setSelectedIndex(null)}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteIndex} className="bg-red-600 hover:bg-red-700">
-              O'chirish
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -15,7 +15,9 @@ router.get('/', Controller.listLetters);
 router.post('/', uploadFields, Controller.createLetter);
 router.put('/:id', uploadFields, Controller.updateLetter);
 router.post('/:id/register', Controller.registerLetter);
+router.delete('/:id', Controller.deleteLetter);
 router.get('/:id', Controller.getLetter);
 router.get('/files/:id/download', Controller.downloadFile);
+router.delete('/files/:id', Controller.deleteFile);
 
 export default router;

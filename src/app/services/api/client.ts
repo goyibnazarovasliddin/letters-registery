@@ -13,13 +13,6 @@ const STORAGE_KEYS = {
     ADMIN_TOKEN: 'admin_token'
 };
 
-const ADMIN_ENDPOINTS = [
-    '/users',
-    '/departments',
-    '/indices',
-    '/settings'
-];
-
 // Helper to safely access window/localStorage
 const isBrowser = typeof window !== 'undefined';
 
@@ -33,33 +26,25 @@ const removeStorageItem = (key: string): void => {
     localStorage.removeItem(key);
 };
 
-// 3) Token selection logic
-const getAccessToken = (config: InternalAxiosRequestConfig): string | null => {
-    const url = config.url || '';
-
-    // Check if request is strictly for an admin endpoint
-    const isAdminEndpoint = ADMIN_ENDPOINTS.some(endpoint => url.startsWith(endpoint));
-
-    // Also check UI path for backward compatibility/context
-    const isAdminPath = isBrowser && window.location.pathname.startsWith('/admin');
-
-    if (isAdminEndpoint || isAdminPath) {
-        return getStorageItem(STORAGE_KEYS.ADMIN_TOKEN);
-    }
-
-    // Default to user token
+const getUserSessionToken = (): string | null => {
     const storedAuth = getStorageItem(STORAGE_KEYS.USER_SESSION);
-    if (storedAuth) {
-        try {
-            const session = JSON.parse(storedAuth);
-            return session.accessToken || null;
-        } catch (e) {
-            console.error('Failed to parse user session', e);
-            return null;
-        }
+    if (!storedAuth) return null;
+    try {
+        const session = JSON.parse(storedAuth);
+        return session.accessToken || null;
+    } catch (e) {
+        console.error('Failed to parse user session', e);
+        return null;
     }
+};
 
-    return null;
+// Token selection: pick by current UI context (path). Server enforces actual permissions.
+const getAccessToken = (_config: InternalAxiosRequestConfig): string | null => {
+    const isAdminPath = isBrowser && window.location.pathname.startsWith('/admin');
+    if (isAdminPath) {
+        return getStorageItem(STORAGE_KEYS.ADMIN_TOKEN) ?? getUserSessionToken();
+    }
+    return getUserSessionToken() ?? getStorageItem(STORAGE_KEYS.ADMIN_TOKEN);
 };
 
 // Request interceptor
@@ -184,12 +169,20 @@ export const api = {
         register: async (id: string): Promise<LetterDTO> => {
             const response = await axiosInstance.post<LetterDTO>(`/letters/${id}/register`);
             return response.data;
+        },
+
+        delete: async (id: string): Promise<void> => {
+            await axiosInstance.delete(`/letters/${id}`);
         }
     },
 
     files: {
         upload: async (file: File, kind: 'XAT' | 'ILOVA'): Promise<FileMeta> => {
             throw new Error('Use api.letters.create for uploads');
+        },
+
+        delete: async (fileId: string): Promise<void> => {
+            await axiosInstance.delete(`/letters/files/${fileId}`);
         },
 
         download: async (fileId: string): Promise<void> => {

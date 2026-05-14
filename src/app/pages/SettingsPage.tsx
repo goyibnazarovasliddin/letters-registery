@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { Switch } from '../components/ui/switch';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Calendar, Save } from 'lucide-react';
+import { PageLoader } from '../components/ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -20,6 +22,7 @@ import {
 export function SettingsPage() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useT();
     const [loading, setLoading] = useState(true);
     const [allowPastDates, setAllowPastDates] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -86,7 +89,7 @@ export function SettingsPage() {
                 setOriginalSettings(res.allowPastDates);
             }
         } catch (e) {
-            toast.error('Sozlamalarni yuklashda xatolik');
+            toast.error(t('toast.settingsLoadError'));
         } finally {
             setLoading(false);
         }
@@ -97,9 +100,9 @@ export function SettingsPage() {
         try {
             await api.settings.update({ allowPastDates });
             setOriginalSettings(allowPastDates);
-            toast.success('Sozlamalar saqlandi');
+            toast.success(t('toast.settingsSaved'));
         } catch (e) {
-            toast.error('Saqlashda xatolik');
+            toast.error(t('toast.settingsSaveError'));
         } finally {
             setSaving(false);
         }
@@ -122,14 +125,14 @@ export function SettingsPage() {
     };
 
     if (loading) {
-        return <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>;
+        return <PageLoader />;
     }
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sozlamalar</h2>
-                <p className="text-gray-500 text-sm">Tizim sozlamalarini boshqarish</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h2>
+                <p className="text-gray-500 text-sm">{t('settings.subtitle')}</p>
             </div>
 
             <Card className="max-w-2xl bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm">
@@ -139,17 +142,17 @@ export function SettingsPage() {
                             <Calendar className="w-5 h-5 text-blue-600 dark:text-white" />
                         </div>
                         <div>
-                            <CardTitle className="text-lg">Sana cheklovlari</CardTitle>
-                            <CardDescription>Xatlar sanalari bo'yicha cheklovlarni sozlash</CardDescription>
+                            <CardTitle className="text-lg">{t('settings.dateRestrictions')}</CardTitle>
+                            <CardDescription>{t('settings.dateRestrictionsSub')}</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
                         <div className="space-y-0.5">
-                            <div className="font-medium text-gray-900 dark:text-gray-200">O'tgan sana bilan xat kiritish</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-200">{t('settings.allowPastDates')}</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                Agar yoqilgan bo'lsa, xodimlarga o'tgan sanalar bilan xat yaratishga ruxsat beriladi.
+                                {t('settings.allowPastDatesSub')}
                             </div>
                         </div>
                         <Switch
@@ -164,10 +167,10 @@ export function SettingsPage() {
                             disabled={saving || !isDirty}
                             className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
                         >
-                            {saving ? 'Saqlanmoqda...' : (
+                            {saving ? t('common.loading') : (
                                 <>
                                     <Save className="w-4 h-4 mr-2" />
-                                    Saqlash
+                                    {t('common.save')}
                                 </>
                             )}
                         </Button>

@@ -20,10 +20,14 @@ import { Letter } from '../types/admin';
 import { api } from '../services/api/client';
 import { toast } from 'sonner';
 import { formatDateTime } from '../utils/formatters';
+import { Skeleton } from './ui/skeleton';
+import { TableSkeleton } from './ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 
 export function Dashboard() {
-  const { users, indices, letters, departments, refreshData } = useAdmin();
+  const { users, indices, letters, departments, refreshData, isLoading } = useAdmin();
   const navigate = useNavigate();
+  const { t } = useT();
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [limit, setLimit] = useState(5);
   const [sortConfig, setSortConfig] = useState<{ direction: 'asc' | 'desc' } | null>(null);
@@ -41,7 +45,7 @@ export function Dashboard() {
     try {
       await api.files.download(fileId);
     } catch (e) {
-      toast.error("Yuklab olishda xatolik");
+      toast.error(t('toast.downloadError'));
     }
   };
 
@@ -71,43 +75,18 @@ export function Dashboard() {
   const activeDepartments = departments.filter(dept => dept.status === 'active').length;
 
   const stats = [
-    {
-      title: 'Bugungi xatlar',
-      value: todayLetters,
-      icon: FileText,
-      color: 'text-blue-600 bg-blue-100 dark:bg-blue-900',
-    },
-    {
-      title: 'Shu hafta',
-      value: thisWeekLetters,
-      icon: TrendingUp,
-      color: 'text-green-600 bg-green-100 dark:bg-green-900',
-    },
-    {
-      title: 'Foydalanuvchilar',
-      value: activeUsers,
-      icon: Users,
-      color: 'text-purple-600 bg-purple-100 dark:bg-purple-900',
-    },
-    {
-      title: 'Indekslar',
-      value: activeIndices,
-      icon: Hash,
-      color: 'text-orange-600 bg-orange-100 dark:bg-orange-900',
-    },
-    {
-      title: 'Bo\'limlar',
-      value: activeDepartments,
-      icon: Building2,
-      color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900',
-    },
+    { title: t('dashboard.todayLetters'), value: todayLetters, icon: FileText, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900', to: '/admin/letters?dateFilter=today' },
+    { title: t('dashboard.thisWeek'), value: thisWeekLetters, icon: TrendingUp, color: 'text-green-600 bg-green-100 dark:bg-green-900', to: '/admin/letters?dateFilter=week' },
+    { title: t('dashboard.activeUsers'), value: activeUsers, icon: Users, color: 'text-purple-600 bg-purple-100 dark:bg-purple-900', to: '/admin/users' },
+    { title: t('dashboard.activeIndices'), value: activeIndices, icon: Hash, color: 'text-orange-600 bg-orange-100 dark:bg-orange-900', to: '/admin/indices' },
+    { title: t('dashboard.activeDepartments'), value: activeDepartments, icon: Building2, color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900', to: '/admin/departments' },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div>
-        <h2 className="text-2xl font-semibold mb-1">Dashboard</h2>
-        <p className="text-gray-500">Tizim ko'rsatkichlari va tezkor harakatlar</p>
+        <h2 className="text-2xl font-semibold mb-1">{t('nav.dashboard')}</h2>
+        <p className="text-gray-500">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* KPI Cards */}
@@ -115,17 +94,25 @@ export function Dashboard() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+            <Card
+              key={stat.title}
+              onClick={() => navigate(stat.to)}
+              className="cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 hover:-translate-y-0.5 py-0 gap-0"
+            >
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-1">
+                <CardTitle className="text-xs font-medium text-gray-500 truncate">
                   {stat.title}
                 </CardTitle>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stat.color}`}>
-                  <Icon className="w-5 h-5" />
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${stat.color}`}>
+                  <Icon className="w-4 h-4" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stat.value}</div>
+              <CardContent className="p-3 pt-1">
+                {isLoading ? (
+                  <Skeleton className="h-7 w-12" />
+                ) : (
+                  <div className="text-2xl font-bold leading-tight">{stat.value}</div>
+                )}
               </CardContent>
             </Card>
           );
@@ -135,7 +122,7 @@ export function Dashboard() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Tezkor harakatlar</CardTitle>
+          <CardTitle>{t('dashboard.quickActions')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,7 +131,7 @@ export function Dashboard() {
               onClick={() => onNavigateToAction('/admin/users', 'create')}
             >
               <Plus className="w-6 h-6" />
-              <span>Foydalanuvchi yaratish</span>
+              <span>{t('dashboard.createUser')}</span>
             </Button>
             <Button
               variant="outline"
@@ -152,7 +139,7 @@ export function Dashboard() {
               onClick={() => onNavigateToAction('/admin/indices', 'create')}
             >
               <Plus className="w-6 h-6" />
-              <span>Indeks qo'shish</span>
+              <span>{t('dashboard.addIndex')}</span>
             </Button>
             <Button
               variant="outline"
@@ -160,7 +147,7 @@ export function Dashboard() {
               onClick={() => onNavigateToAction('/admin/departments', 'create')}
             >
               <Plus className="w-6 h-6" />
-              <span>Bo'lim qo'shish</span>
+              <span>{t('dashboard.addDepartment')}</span>
             </Button>
             <Button
               variant="outline"
@@ -168,7 +155,7 @@ export function Dashboard() {
               onClick={() => navigate('/admin/reports')}
             >
               <Download className="w-6 h-6" />
-              <span>Hisobot eksport</span>
+              <span>{t('dashboard.exportReport')}</span>
             </Button>
           </div>
         </CardContent>
@@ -177,9 +164,9 @@ export function Dashboard() {
       {/* Recent Letters */}
       <Card className="mt-8">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>So'nggi xatlar (Recents)</CardTitle>
+          <CardTitle>{t('dashboard.recents')}</CardTitle>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-normal">Soni:</span>
+            <span className="text-sm text-gray-500 font-normal">{t('common.count')}</span>
             <Select value={limit.toString()} onValueChange={(v) => setLimit(Number(v))}>
               <SelectTrigger className="w-[80px] h-8">
                 <SelectValue placeholder="Soni" />
@@ -194,6 +181,9 @@ export function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <TableSkeleton rows={5} cols={6} />
+          ) : (
           <div className="border rounded-lg bg-white dark:bg-gray-900 overflow-x-auto">
             {(() => {
               const sortedLetters = [...letters].sort((a, b) => {
@@ -217,25 +207,25 @@ export function Dashboard() {
                   <Table>
                     <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
                       <TableRow>
-                        <TableHead className="w-12 text-center whitespace-nowrap">№</TableHead>
-                        <TableHead className="whitespace-nowrap">Xat raqami</TableHead>
-                        <TableHead className="whitespace-nowrap">Ro‘yxatga olingan vaqt</TableHead>
-                        <TableHead className="whitespace-nowrap">Sana</TableHead>
-                        <TableHead className="whitespace-nowrap">Indeks</TableHead>
-                        <TableHead className="whitespace-nowrap">Yuborilgan manzil</TableHead>
-                        <TableHead className="whitespace-nowrap">Mavzu</TableHead>
-                        <TableHead className="whitespace-nowrap">Mazmuni</TableHead>
-                        <TableHead className="whitespace-nowrap">Xat varaqlari</TableHead>
-                        <TableHead className="whitespace-nowrap">Ilova varaqlari</TableHead>
-                        <TableHead className="whitespace-nowrap">Ijrochi</TableHead>
-                        <TableHead className="whitespace-nowrap">Lavozimi</TableHead>
+                        <TableHead className="w-12 text-center whitespace-nowrap">{t('common.no')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.number')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.registeredAt')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.date')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.index')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.recipient')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.subject')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.summary')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.pageCount')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.attachmentPageCount')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.executor')}</TableHead>
+                        <TableHead className="whitespace-nowrap">{t('letter.position')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sortedLetters.slice(0, limit).length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={12} className="text-center py-8 text-gray-500">
-                            Hali xatlar yo'q
+                            {t('lettersList.empty')}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -250,7 +240,7 @@ export function Dashboard() {
                               {letter.letterNumber ? (
                                 <span className="font-mono text-green-600 dark:text-green-400 font-bold">{letter.letterNumber}</span>
                               ) : (
-                                <span className="text-gray-400 italic text-xs">Ro'yxatga olinmagan</span>
+                                <span className="text-gray-400 italic text-xs">{t('letter.notRegistered')}</span>
                               )}
                             </TableCell>
                             <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap">
@@ -280,6 +270,7 @@ export function Dashboard() {
               );
             })()}
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -287,14 +278,14 @@ export function Dashboard() {
       <Dialog open={!!selectedLetter} onOpenChange={() => setSelectedLetter(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Xat tafsilotlari</DialogTitle>
+            <DialogTitle>{t('letter.detailsTitle')}</DialogTitle>
           </DialogHeader>
           {selectedLetter && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border flex justify-between items-center">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase font-bold">Xat raqami</p>
+                    <p className="text-xs text-gray-500 uppercase font-bold">{t('letter.number')}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-xl font-bold font-mono text-green-600 dark:text-green-400">
                         {selectedLetter.letterNumber || "N/A"}
@@ -306,7 +297,7 @@ export function Dashboard() {
                         onClick={(e) => {
                           e.stopPropagation();
                           navigator.clipboard.writeText(selectedLetter.letterNumber || '');
-                          toast.success("Nusxalandi");
+                          toast.success(t('common.copied'));
                         }}
                       >
                         <FileText className="w-4 h-4" />
@@ -314,53 +305,53 @@ export function Dashboard() {
                     </div>
                     {selectedLetter.createdDate && (
                       <p className="text-sm text-gray-500 mt-1">
-                        Ro‘yxatga olingan vaqt: <span className="font-mono">{formatDateTime(selectedLetter.createdDate)}</span>
+                        {t('letter.registeredAt')}: <span className="font-mono">{formatDateTime(selectedLetter.createdDate)}</span>
                       </p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500">Indeks</p>
+                  <p className="text-sm text-gray-500">{t('letter.index')}</p>
                   <p className="font-medium font-mono">{selectedLetter.indexCode}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{selectedLetter.indexName}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Xat sanasi</p>
+                  <p className="text-sm text-gray-500">{t('letter.date')}</p>
                   <p className="font-medium">
-                    {selectedLetter.letterDate ? new Date(selectedLetter.letterDate).toLocaleDateString('ru-RU') : 'Kiritilmagan'}
+                    {selectedLetter.letterDate ? new Date(selectedLetter.letterDate).toLocaleDateString('ru-RU') : t('letter.dateEmpty')}
                   </p>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Yuborilgan manzil</p>
+                <p className="text-sm text-gray-500">{t('letter.recipient')}</p>
                 <p className="font-medium">{selectedLetter.recipient}</p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Xat mavzusi</p>
+                <p className="text-sm text-gray-500">{t('letter.subject')}</p>
                 <p className="font-medium">{selectedLetter.subject}</p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500">Qisqacha mazmuni</p>
-                <p className="text-gray-700 dark:text-gray-300">{selectedLetter.summary || "Mazmun kiritilmagan"}</p>
+                <p className="text-sm text-gray-500">{t('letter.summary')}</p>
+                <p className="text-gray-700 dark:text-gray-300">{selectedLetter.summary || t('letter.summaryEmpty')}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Xat varaqlar soni</p>
+                  <p className="text-sm text-gray-500">{t('letter.pageCount')}</p>
                   <p className="font-medium">{selectedLetter.pageCount}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Ilova varaqlar soni</p>
+                  <p className="text-sm text-gray-500">{t('letter.attachmentPageCount')}</p>
                   <p className="font-medium">{selectedLetter.attachmentPageCount}</p>
                 </div>
               </div>
 
               <div className="border-t pt-4">
-                <p className="text-sm text-gray-500 mb-2">Ijrochi ma'lumotlari</p>
+                <p className="text-sm text-gray-500 mb-2">{t('letter.executorInfo')}</p>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                   <p className="font-medium">{selectedLetter.userFish}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{selectedLetter.userPosition}</p>
@@ -368,21 +359,21 @@ export function Dashboard() {
               </div>
 
               <div className="border-t pt-4">
-                <p className="text-sm text-gray-500 mb-2">Fayllar</p>
+                <p className="text-sm text-gray-500 mb-2">{t('letter.files')}</p>
                 <div className="grid grid-cols-1 gap-2">
                   {!selectedLetter.xatFile && (!selectedLetter.ilovaFiles || selectedLetter.ilovaFiles.length === 0) ? (
                     <div className="bg-gray-50 dark:bg-gray-800 border border-dashed rounded-lg p-4 text-center">
-                      <p className="text-gray-500 text-sm italic">Fayllar biriktirilmagan</p>
+                      <p className="text-gray-500 text-sm italic">{t('letter.filesNone')}</p>
                     </div>
                   ) : (
                     <>
                       {selectedLetter.xatFile && (
                         <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border justify-between">
                           <div className="flex items-center gap-2 overflow-hidden">
-                            <span className="text-sm font-medium">Asosiy xat:</span>
+                            <span className="text-sm font-medium">{t('letter.mainLetter')}</span>
                             <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
                               {/* @ts-ignore */}
-                              {typeof selectedLetter.xatFile === 'string' ? selectedLetter.xatFile : 'Fayl'}
+                              {typeof selectedLetter.xatFile === 'string' ? selectedLetter.xatFile : ''}
                             </span>
                           </div>
                           {selectedLetter.xatFileId && (
@@ -399,10 +390,10 @@ export function Dashboard() {
                       {selectedLetter.ilovaFiles?.map((file, idx) => (
                         <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-dashed justify-between">
                           <div className="flex items-center gap-2 overflow-hidden">
-                            <span className="text-sm font-medium">Ilova {idx + 1}:</span>
+                            <span className="text-sm font-medium">{t('letter.attachment')} {idx + 1}:</span>
                             <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
                               {/* @ts-ignore */}
-                              {typeof file === 'string' ? file : 'Fayl'}
+                              {typeof file === 'string' ? file : ''}
                             </span>
                           </div>
                           {selectedLetter.ilovaFileIds && selectedLetter.ilovaFileIds[idx] && (
@@ -422,10 +413,10 @@ export function Dashboard() {
               </div>
 
               <div className="border-t pt-4">
-                <p className="text-sm text-gray-500 mb-2">Imzo</p>
+                <p className="text-sm text-gray-500 mb-2">{t('letter.signature')}</p>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                   <p className="text-sm text-gray-500 italic">
-                    Elektron imzo hozircha yo'q (kelajakda qo'shiladi)
+                    {t('letter.signaturePlaceholder')}
                   </p>
                 </div>
               </div>

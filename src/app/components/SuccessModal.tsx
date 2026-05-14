@@ -1,8 +1,8 @@
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'; // Assuming these exist fromshadcn
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';
 import { CheckCircle, Copy, FileText, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '../contexts/LanguageContext';
 
 
 interface SuccessModalProps {
@@ -17,12 +17,13 @@ interface SuccessModalProps {
 }
 
 export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModalProps) {
+    const { t } = useT();
     if (!data) return null;
 
     const copyToClipboard = () => {
         if (!data.letterNumber) return;
         navigator.clipboard.writeText(data.letterNumber);
-        toast.success("Xat raqami nusxalandi");
+        toast.success(t('common.copied'));
     };
 
     return (
@@ -32,12 +33,12 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-2">
                         <CheckCircle className="w-10 h-10 text-green-600" />
                     </div>
-                    <DialogTitle className="text-xl text-center text-green-700">Muvaffaqiyatli ro‘yxatga olindi</DialogTitle>
+                    <DialogTitle className="text-xl text-center text-green-700">{t('success.title')}</DialogTitle>
                 </DialogHeader>
 
                 <div className="py-6 space-y-6">
                     <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-center space-y-2">
-                        <p className="text-sm text-gray-500 uppercase font-medium tracking-wider">Xat raqamingiz</p>
+                        <p className="text-sm text-gray-500 uppercase font-medium tracking-wider">{t('success.yourNumber')}</p>
                         <div className="flex items-center justify-center gap-3">
                             <span className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
                                 {data.letterNumber}
@@ -47,7 +48,7 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
                                 size="icon"
                                 onClick={copyToClipboard}
                                 className="h-10 w-10 text-gray-400 hover:text-green-600 hover:bg-green-50"
-                                title="Nusxalash"
+                                title={t('common.copy')}
                             >
                                 <Copy className="w-5 h-5" />
                             </Button>
@@ -56,7 +57,7 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2 text-center">
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">Ro'yxatga olingan sana</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">{t('success.registeredAt')}</p>
                             <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/20">
                                 <Calendar className="w-5 h-5 text-blue-500 mb-1.5" />
                                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
@@ -69,7 +70,7 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
                         </div>
 
                         <div className="space-y-2 text-center">
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">Xat sanasi</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">{t('success.letterDate')}</p>
                             <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-green-50/30 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/20">
                                 <FileText className="w-5 h-5 text-green-500 mb-1.5" />
                                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
@@ -83,10 +84,10 @@ export function SuccessModal({ open, onClose, onViewLetter, data }: SuccessModal
 
                 <DialogFooter className="flex-col sm:flex-row gap-2">
                     <Button variant="outline" onClick={onClose} className="w-full sm:w-auto flex-1">
-                        Yopish
+                        {t('common.close')}
                     </Button>
                     <Button onClick={onViewLetter} className="w-full sm:w-auto flex-1 bg-green-600 hover:bg-green-700">
-                        Xatni ko‘rish
+                        {t('success.viewLetter')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

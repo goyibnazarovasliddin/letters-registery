@@ -25,9 +25,12 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useAdmin } from '../contexts/AdminContext';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { TableSkeleton } from './ui/PageLoader';
+import { useT } from '../contexts/LanguageContext';
 
 export function Reports() {
-  const { letters, indices, users, refreshData } = useAdmin();
+  const { letters, indices, users, refreshData, isLoading } = useAdmin();
+  const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
   const [page, setPage] = useState(1);
@@ -66,7 +69,13 @@ export function Reports() {
   });
 
   const sortedLetters = [...filteredLetters].sort((a, b) => {
-    if (!sortConfig) return 0;
+    if (!sortConfig) {
+      // Default: order by the date the letter belongs to (newest first),
+      // tie-broken by sequence — back-dated letters land among their dates.
+      const dateCmp = (b.letterDate || '').localeCompare(a.letterDate || '');
+      if (dateCmp !== 0) return dateCmp;
+      return getSequence(b.letterNumber) - getSequence(a.letterNumber);
+    }
     const seqA = getSequence(a.letterNumber);
     const seqB = getSequence(b.letterNumber);
     return sortConfig.direction === 'asc' ? seqA - seqB : seqB - seqA;
@@ -118,11 +127,11 @@ export function Reports() {
     worksheet['!cols'] = columnWidths;
 
     XLSX.writeFile(workbook, `Hisobot_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success('Excel fayl yuklab olindi');
+    toast.success(t('toast.excelDownloaded'));
   };
 
   const exportToPDF = () => {
-    toast.info('PDF eksport funksiyasi ishlab chiqilmoqda');
+    toast.info(t('toast.pdfInProgress'));
   };
 
   const months = [
@@ -164,12 +173,10 @@ export function Reports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div>
-        <h2 className="text-2xl font-semibold mb-1">Hisobotlar</h2>
-        <p className="text-gray-500">
-          Xatlar bo'yicha hisobotlarni ko'rish va eksport qilish
-        </p>
+        <h2 className="text-2xl font-semibold mb-1">{t('reports.title')}</h2>
+        <p className="text-gray-500">{t('reports.subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -177,23 +184,23 @@ export function Reports() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Filtrlar
+            {t('reports.filters')}
           </CardTitle>
           <CardDescription>
-            Hisobotni filtrlab, kerakli ma'lumotlarni tanlang
+            {t('reports.filtersSub')}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-6 items-start">
             {/* Start Date */}
-            <div className="md:col-span-1 xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="md:col-span-1 xl:col-span-3 space-y-2">
+              <Label className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-green-600" />
-                Boshlanish sanasi
-              </div>
-              <div className="grid grid-cols-[1fr_1.5fr_1fr] gap-1 items-end">
+                {t('reports.startDate')}
+              </Label>
+              <div className="grid grid-cols-[1fr_1.5fr_1fr] gap-1">
                 <Select value={startYear} onValueChange={setStartYear}>
-                  <SelectTrigger className="h-9 px-3">
+                  <SelectTrigger className="px-3">
                     <SelectValue placeholder="Yil" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -201,7 +208,7 @@ export function Reports() {
                   </SelectContent>
                 </Select>
                 <Select value={startMonth} onValueChange={setStartMonth}>
-                  <SelectTrigger className="h-9 px-3">
+                  <SelectTrigger className="px-3">
                     <SelectValue placeholder="Oy" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -213,14 +220,14 @@ export function Reports() {
             </div>
 
             {/* End Date */}
-            <div className="md:col-span-1 xl:col-span-3 space-y-3 p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="md:col-span-1 xl:col-span-3 space-y-2">
+              <Label className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-green-600" />
-                Tugash sanasi
-              </div>
-              <div className="grid grid-cols-[1fr_1.5fr_1fr] gap-1 items-end">
+                {t('reports.endDate')}
+              </Label>
+              <div className="grid grid-cols-[1fr_1.5fr_1fr] gap-1">
                 <Select value={endYear} onValueChange={setEndYear}>
-                  <SelectTrigger className="h-9 px-3">
+                  <SelectTrigger className="px-3">
                     <SelectValue placeholder="Yil" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -228,7 +235,7 @@ export function Reports() {
                   </SelectContent>
                 </Select>
                 <Select value={endMonth} onValueChange={setEndMonth}>
-                  <SelectTrigger className="h-9 px-3">
+                  <SelectTrigger className="px-3">
                     <SelectValue placeholder="Oy" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
@@ -241,13 +248,13 @@ export function Reports() {
 
             {/* Other Selection Filters */}
             <div className="md:col-span-2 xl:col-span-2 space-y-2">
-              <Label>Indeks</Label>
+              <Label>{t('letter.index')}</Label>
               <Select value={selectedIndex} onValueChange={setSelectedIndex}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Barcha indekslar" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {indices.map(idx => (
                     <SelectItem key={idx.id} value={idx.code}>{idx.code} - {idx.name}</SelectItem>
                   ))}
@@ -256,13 +263,13 @@ export function Reports() {
             </div>
 
             <div className="md:col-span-2 xl:col-span-2 space-y-2">
-              <Label>Ijrochi</Label>
+              <Label>{t('letter.executor')}</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Barcha ijrochilar" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {users.map(u => (
                     <SelectItem key={u.id} value={u.fish}>{u.fish}</SelectItem>
                   ))}
@@ -271,18 +278,18 @@ export function Reports() {
             </div>
 
             <div className="md:col-span-2 xl:col-span-2 space-y-2">
-              <Label>Tartiblash (Xat raqami)</Label>
+              <Label>{t('letter.sortBy')}</Label>
               <Select
                 value={sortConfig?.direction || 'none'}
                 onValueChange={(v: any) => handleSort(v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Saralash" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Asl holatda</SelectItem>
-                  <SelectItem value="asc">O'sish</SelectItem>
-                  <SelectItem value="desc">Kamayish</SelectItem>
+                  <SelectItem value="none">{t('letter.sortDefault')}</SelectItem>
+                  <SelectItem value="asc">{t('letter.sortAsc')}</SelectItem>
+                  <SelectItem value="desc">{t('letter.sortDesc')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -297,13 +304,24 @@ export function Reports() {
             <FileSpreadsheet className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
               <p className="font-medium text-blue-900 dark:text-blue-100">
-                Eksport fayl formati
+                {t('reports.formatTitle')}
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
-                Eksport faylida jadval quyidagi qat'iy ustunlarda chiqadi:
+                {t('reports.formatSub')}
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Xat raqami', 'Sana', 'Indeks', 'Yuborilgan manzil', 'Mavzu', 'Mazmuni', 'Xat varaqlari', 'Ilova varaqlari', 'Ijrochi', 'Lavozimi'].map((col) => (
+                {[
+                  t('letter.number'),
+                  t('letter.date'),
+                  t('letter.index'),
+                  t('letter.recipient'),
+                  t('letter.subject'),
+                  t('letter.summary'),
+                  t('letter.pageCount'),
+                  t('letter.attachmentPageCount'),
+                  t('letter.executor'),
+                  t('letter.position'),
+                ].map((col) => (
                   <Badge key={col} variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 border-blue-200 dark:border-blue-800">
                     {col}
                   </Badge>
@@ -321,14 +339,14 @@ export function Reports() {
           onClick={exportToExcel}
         >
           <FileSpreadsheet className="w-4 h-4 mr-2" />
-          Excel eksport
+          {t('reports.excelExport')}
         </Button>
         <Button
           variant="outline"
           onClick={exportToPDF}
         >
           <FileText className="w-4 h-4 mr-2" />
-          PDF eksport
+          {t('reports.pdfExport')}
         </Button>
       </div>
 
@@ -336,13 +354,13 @@ export function Reports() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle>Natijalar ({filteredLetters.length})</CardTitle>
+            <CardTitle>{t('reports.results')} ({filteredLetters.length})</CardTitle>
             <CardDescription>
-              Filtr bo'yicha topilgan xatlar ro'yxati
+              {t('reports.resultsSub')}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-normal">Soni:</span>
+            <span className="text-sm text-gray-500 font-normal">{t('common.count')}</span>
             <Select value={limit.toString()} onValueChange={(v: string) => { setLimit(Number(v)); setPage(1); }}>
               <SelectTrigger className="w-[80px] h-8">
                 <SelectValue placeholder="Soni" />
@@ -357,36 +375,40 @@ export function Reports() {
           </div>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <TableSkeleton rows={5} cols={6} />
+          ) : (
+          <>
           <div className="border rounded-lg bg-white dark:bg-gray-900 overflow-x-auto">
             <div className="min-w-[800px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="whitespace-nowrap">№</TableHead>
-                    <TableHead className="whitespace-nowrap">Xat raqami</TableHead>
-                    <TableHead className="whitespace-nowrap">Sana</TableHead>
-                    <TableHead className="whitespace-nowrap">Indeks</TableHead>
-                    <TableHead className="whitespace-nowrap">Yuborilgan manzil</TableHead>
-                    <TableHead className="whitespace-nowrap">Mavzu</TableHead>
-                    <TableHead className="whitespace-nowrap">Mazmuni</TableHead>
-                    <TableHead className="whitespace-nowrap">Xat varaqlari</TableHead>
-                    <TableHead className="whitespace-nowrap">Ilova varaqlari</TableHead>
-                    <TableHead className="whitespace-nowrap">Ijrochi</TableHead>
-                    <TableHead className="whitespace-nowrap">Lavozimi</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('common.no')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.number')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.date')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.index')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.recipient')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.subject')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.summary')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.pageCount')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.attachmentPageCount')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.executor')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('letter.position')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedLetters.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                        Natijalar topilmadi
+                        {t('reports.notFound')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     paginatedLetters.map((letter, index) => (
                       <TableRow key={letter.id}>
                         <TableCell className="text-center text-gray-500">{(page - 1) * limit + index + 1}</TableCell>
-                        <TableCell className="font-medium whitespace-nowrap">{letter.letterNumber || 'Raqamlanmagan'}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{letter.letterNumber || t('letter.notRegistered')}</TableCell>
                         <TableCell className="text-sm text-gray-500 whitespace-nowrap">
                           {new Date(letter.letterDate).toLocaleDateString('ru-RU')}
                         </TableCell>
@@ -414,10 +436,10 @@ export function Reports() {
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
               >
-                Oldingi
+                {t('common.previous')}
               </Button>
               <span className="text-sm text-gray-500">
-                Sahifa {page} / {totalPages}
+                {t('common.page')} {page} / {totalPages}
               </span>
               <Button
                 variant="ghost"
@@ -425,9 +447,11 @@ export function Reports() {
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => p + 1)}
               >
-                Keyingi
+                {t('common.next')}
               </Button>
             </div>
+          )}
+          </>
           )}
         </CardContent>
       </Card>

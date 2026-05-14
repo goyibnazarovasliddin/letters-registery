@@ -10,7 +10,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent } from '../components/ui/card';
 import { FileUpload } from '../components/ui/FileUpload';
 import { toast } from 'sonner';
-import { Save, Send, ChevronLeft, X, AlertTriangle, Calendar } from 'lucide-react';
+import { Save, Send, ChevronLeft, X, AlertTriangle, Paperclip } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
     AlertDialog,
@@ -21,11 +21,14 @@ import {
     AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { SuccessModal } from '../components/SuccessModal';
+import { useT } from '../contexts/LanguageContext';
+import { DatePicker } from '../components/ui/DatePicker';
 
 export function LetterCreate() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { user } = useUser();
+    const { t } = useT();
     const [loading, setLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
 
@@ -35,7 +38,7 @@ export function LetterCreate() {
 
     useEffect(() => {
         if (user && user.status !== 'active') {
-            toast.error("Hisobingiz faol emas, xat yarata olmaysiz");
+            toast.error(t('toast.accountInactive'));
             navigate('/');
         }
     }, [user, navigate]);
@@ -59,9 +62,14 @@ export function LetterCreate() {
         letterDate: new Date().toISOString().split('T')[0]
     });
 
-    // File State
+    // File State (new uploads pending save)
     const [xatFile, setXatFile] = useState<File | null>(null);
     const [ilovaFiles, setIlovaFiles] = useState<File[]>([]);
+
+    // Existing files already saved on server (edit mode)
+    type ExistingFile = { id: string; fileName: string };
+    const [existingXat, setExistingXat] = useState<ExistingFile | null>(null);
+    const [existingIlovas, setExistingIlovas] = useState<ExistingFile[]>([]);
 
     // Indices State
     const [indices, setIndices] = useState<{ id: string, code: string, name: string, status: string }[]>([]);
@@ -92,7 +100,7 @@ export function LetterCreate() {
                 const active = data.filter((i: any) => i.status === 'active');
                 setIndices(active);
             })
-            .catch(() => toast.error('Indekslarni yuklab bo\'lmadi'));
+            .catch(() => toast.error(t('toast.indicesLoadError')));
 
         api.settings.get()
             .then(res => {
@@ -108,7 +116,7 @@ export function LetterCreate() {
             const letter = await api.letters.get(letterId);
 
             if (letter.status !== 'DRAFT') {
-                toast.error('Faqat qoralamalarni tahrirlash mumkin');
+                toast.error(t('toast.onlyDraftEdit'));
                 navigate('/letters');
                 return;
             }
@@ -124,10 +132,13 @@ export function LetterCreate() {
                 letterDate: new Date(letter.letterDate).toISOString().split('T')[0]
             });
 
-            // Note: Files cannot be pre-filled in browser for security reasons
-            // User will need to re-upload files if they want to change them
+            // Track existing files (cannot be loaded as File objects, displayed as references)
+            const xat = (letter as any).files?.xat;
+            const ilovas = (letter as any).files?.ilova || [];
+            setExistingXat(xat ? { id: xat.id, fileName: xat.fileName } : null);
+            setExistingIlovas(ilovas.map((f: any) => ({ id: f.id, fileName: f.fileName })));
         } catch (error) {
-            toast.error('Xatni yuklashda xatolik');
+            toast.error(t('toast.letterLoadError'));
             navigate('/letters');
         } finally {
             setLoading(false);
@@ -138,11 +149,11 @@ export function LetterCreate() {
         if (field === 'letterDate') {
             const today = new Date().toISOString().split('T')[0];
             if (value > today) {
-                toast.error("Kelajak sanasini tanlash mumkin emas");
+                toast.error(t('toast.futureDateError'));
                 return;
             }
             if (!allowPastDates && value < today) {
-                toast.error("O'tgan sanani tanlash taqiqlangan");
+                toast.error(t('toast.pastDateError'));
                 return;
             }
         }
@@ -178,18 +189,47 @@ export function LetterCreate() {
         setIlovaFiles(prev => prev.filter((_, i) => i !== index));
     };
 
+    const removeExistingXat = async () => {
+        if (!existingXat) return;
+        try {
+            await api.files.delete(existingXat.id);
+            setExistingXat(null);
+            toast.success(t('toast.fileDeleted'));
+        } catch (e) {
+            toast.error(t('toast.fileDeleteError'));
+        }
+    };
+
+    const removeExistingIlova = async (fileId: string) => {
+        try {
+            await api.files.delete(fileId);
+            setExistingIlovas(prev => prev.filter(f => f.id !== fileId));
+            toast.success(t('toast.fileDeleted'));
+        } catch (e) {
+            toast.error(t('toast.fileDeleteError'));
+        }
+    };
+
+    const downloadExistingFile = async (fileId: string) => {
+        try {
+            await api.files.download(fileId);
+        } catch (e) {
+            toast.error(t('toast.downloadError'));
+        }
+    };
+
     const handleSubmit = async (status: 'DRAFT' | 'REGISTERED') => {
         // Validation
         if (status === 'REGISTERED') {
             if (!formData.indexId || !formData.recipient || !formData.subject) {
-                toast.error('Ro\'yxatga olish uchun majburiy maydonlarni to\'ldiring');
+                toast.error(t('toast.requiredFields'));
                 return;
             }
         } else {
             // For drafts, check if at least something is entered
             const hasData = formData.indexId || formData.recipient || formData.subject || formData.summary || xatFile || ilovaFiles.length > 0;
             if (!hasData) {
-                toast.error("Saqlash uchun kamida biror ma'lumot kiriting");
+                toast.error(t('toast.atLeastOneField'));
                 return;
             }
         }
@@ -243,7 +283,7 @@ export function LetterCreate() {
 
         } catch (e) {
             console.error(e);
-            toast.error('Xatolik yuz berdi');
+            toast.error(t('toast.genericError'));
             setIsSubmitting(false);
         } finally {
             setLoading(false);
@@ -258,8 +298,8 @@ export function LetterCreate() {
                     <ChevronLeft className="w-5 h-5" />
                 </Button>
                 <div>
-                    <h2 className="text-2xl font-bold">{isEditMode ? 'Xatni tahrirlash' : 'Yangi xat yaratish'}</h2>
-                    <p className="text-gray-500 text-sm">{isEditMode ? 'Qoralamani tahrirlash' : 'Chiquvchi xatni ro\'yxatga olish'}</p>
+                    <h2 className="text-2xl font-bold">{isEditMode ? t('letterCreate.titleEdit') : t('letterCreate.title')}</h2>
+                    <p className="text-gray-500 text-sm">{isEditMode ? t('letterCreate.subEdit') : t('letterCreate.sub')}</p>
                 </div>
             </div>
 
@@ -270,10 +310,10 @@ export function LetterCreate() {
                         <CardContent className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Indeks <span className="text-red-500">*</span></Label>
+                                    <Label>{t('letterCreate.indexRequired')} <span className="text-red-500">*</span></Label>
                                     <Select onValueChange={(v) => handleInputChange('indexId', v)} value={formData.indexId}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Tanlang" />
+                                            <SelectValue placeholder={t('letterCreate.selectIndex')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {indices.map(i => (
@@ -283,25 +323,21 @@ export function LetterCreate() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Sana</Label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-white" />
-                                        <Input
-                                            type="date"
-                                            value={formData.letterDate}
-                                            onChange={(e) => handleInputChange('letterDate', e.target.value)}
-                                            max={new Date().toISOString().split('T')[0]}
-                                            readOnly={!allowPastDates}
-                                            className={`pl-10 datepicker-light ${!allowPastDates ? 'bg-gray-50 cursor-not-allowed opacity-80' : ''}`}
-                                        />
-                                    </div>
+                                    <Label>{t('letter.date')}</Label>
+                                    <DatePicker
+                                        value={formData.letterDate}
+                                        onChange={(v) => handleInputChange('letterDate', v)}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        disabled={!allowPastDates}
+                                        className={!allowPastDates ? 'bg-gray-50 dark:bg-gray-900 opacity-80' : ''}
+                                    />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Qabul qiluvchi <span className="text-red-500">*</span></Label>
+                                <Label>{t('letterCreate.recipientRequired')} <span className="text-red-500">*</span></Label>
                                 <Input
-                                    placeholder="Indeksni tanlang"
+                                    placeholder={t('letterCreate.recipientPlaceholder')}
                                     value={formData.recipient}
                                     readOnly
                                     className="bg-gray-50 dark:bg-gray-900"
@@ -309,18 +345,18 @@ export function LetterCreate() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Mavzu <span className="text-red-500">*</span></Label>
+                                <Label>{t('letterCreate.subjectRequired')} <span className="text-red-500">*</span></Label>
                                 <Input
-                                    placeholder="Xat mazmuni qisqacha"
+                                    placeholder={t('letterCreate.subjectPlaceholder')}
                                     value={formData.subject}
                                     onChange={(e) => handleInputChange('subject', e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Qisqacha mazmuni</Label>
+                                <Label>{t('letterCreate.summary')}</Label>
                                 <Textarea
-                                    placeholder="Qo'shimcha izohlar..."
+                                    placeholder={t('letterCreate.summaryPlaceholder')}
                                     className="h-24 resize-none"
                                     value={formData.summary}
                                     onChange={(e) => handleInputChange('summary', e.target.value)}
@@ -332,20 +368,54 @@ export function LetterCreate() {
                     <Card>
                         <CardContent className="p-6 space-y-4">
                             <div>
-                                <h3 className="font-medium mb-4">Xat fayli <span className="text-gray-400 text-sm font-normal">(ixtiyoriy)</span></h3>
-                                <FileUpload
-                                    label="Asosiy hujjatni yuklang"
-                                    file={xatFile ? { name: xatFile.name, size: xatFile.size } : undefined}
-                                    onFileSelect={handleFileSelect}
-                                    onRemove={() => setXatFile(null)}
-                                />
+                                <h3 className="font-medium mb-4">{t('letterCreate.xatFile')} <span className="text-gray-400 text-sm font-normal">({t('common.optional')})</span></h3>
+                                {existingXat && !xatFile && (
+                                    <div className="flex items-center justify-between p-3 mb-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadExistingFile(existingXat.id)}
+                                            className="flex items-center gap-2 min-w-0 flex-1 text-left hover:underline"
+                                        >
+                                            <Paperclip className="w-4 h-4 text-blue-600 shrink-0" />
+                                            <span className="text-sm truncate text-blue-700 dark:text-blue-300">{existingXat.fileName}</span>
+                                            <span className="text-xs text-blue-500/70 shrink-0">({t('letterCreate.uploaded')})</span>
+                                        </button>
+                                        <Button variant="ghost" size="sm" onClick={removeExistingXat} className="text-red-500 hover:text-red-600 h-8 w-8 p-0 shrink-0">
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                )}
+                                {!existingXat && (
+                                    <FileUpload
+                                        label={t('letterCreate.xatFileUpload')}
+                                        file={xatFile ? { name: xatFile.name, size: xatFile.size } : undefined}
+                                        onFileSelect={handleFileSelect}
+                                        onRemove={() => setXatFile(null)}
+                                    />
+                                )}
                             </div>
 
                             <div className="pt-4 border-t">
-                                <h3 className="font-medium mb-4">Ilova fayllar <span className="text-gray-400 text-sm font-normal">(ixtiyoriy)</span></h3>
+                                <h3 className="font-medium mb-4">{t('letterCreate.ilovaFiles')} <span className="text-gray-400 text-sm font-normal">({t('common.optional')})</span></h3>
                                 <div className="space-y-3">
+                                    {existingIlovas.map((file) => (
+                                        <div key={file.id} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                            <button
+                                                type="button"
+                                                onClick={() => downloadExistingFile(file.id)}
+                                                className="flex items-center gap-2 min-w-0 flex-1 text-left hover:underline"
+                                            >
+                                                <Paperclip className="w-4 h-4 text-blue-600 shrink-0" />
+                                                <span className="text-sm truncate text-blue-700 dark:text-blue-300">{file.fileName}</span>
+                                                <span className="text-xs text-blue-500/70 shrink-0">({t('letterCreate.uploaded')})</span>
+                                            </button>
+                                            <Button variant="ghost" size="sm" onClick={() => removeExistingIlova(file.id)} className="text-red-500 hover:text-red-600 h-8 w-8 p-0 shrink-0">
+                                                <X className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
                                     {ilovaFiles.map((file, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <div key={`new-${idx}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                             <div className="flex items-center gap-2">
                                                 <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-gray-600 dark:text-gray-400">FILE</div>
                                                 <span className="text-sm truncate max-w-xs dark:text-gray-200">{file.name}</span>
@@ -357,7 +427,7 @@ export function LetterCreate() {
                                     ))}
 
                                     <FileUpload
-                                        label="Ilova qo'shish (Fayl tanlang)"
+                                        label={t('letterCreate.ilovaAdd')}
                                         onFileSelect={handleIlovaSelect}
                                     />
                                 </div>
@@ -370,10 +440,10 @@ export function LetterCreate() {
                 <div className="space-y-6">
                     <Card>
                         <CardContent className="p-6 space-y-4">
-                            <h3 className="font-medium">Sahifalar soni</h3>
+                            <h3 className="font-medium">{t('letterCreate.pageCounts')}</h3>
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Xat varaqlari</Label>
+                                    <Label>{t('letterCreate.letterPages')}</Label>
                                     <Input
                                         type="number"
                                         min={1}
@@ -382,7 +452,7 @@ export function LetterCreate() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Ilova varaqlari</Label>
+                                    <Label>{t('letterCreate.attachmentPages')}</Label>
                                     <Input
                                         type="number"
                                         min={0}
@@ -396,21 +466,21 @@ export function LetterCreate() {
 
                     <div className="space-y-3">
                         <Button
-                            className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg shadow-lg shadow-green-600/20 transition-all hover:scale-[1.02]"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white dark:text-white py-6 text-lg"
                             onClick={() => handleSubmit('REGISTERED')}
                             disabled={loading}
                         >
                             <Send className="w-5 h-5 mr-2" />
-                            Ro'yxatga olish
+                            {t('letterCreate.register')}
                         </Button>
                         <Button
                             variant="default"
-                            className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white"
+                            className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white dark:text-white"
                             onClick={() => handleSubmit('DRAFT')}
                             disabled={loading}
                         >
                             <Save className="w-5 h-5 mr-2" />
-                            Qoralamaga saqlash
+                            {t('letterCreate.saveDraft')}
                         </Button>
                     </div>
                 </div>
@@ -422,28 +492,28 @@ export function LetterCreate() {
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
                             <AlertTriangle className="w-5 h-5" />
-                            Saqlanmagan o'zgarishlar
+                            {t('letterCreate.unsavedTitle')}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            Sizda saqlanmagan ma'lumotlar bor. Sahifadan chiqishdan oldin ularni saqlashni xohlaysizmi?
+                            {t('letterCreate.unsavedSub')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="flex flex-col gap-2 mt-4">
                         <Button
-                            className="w-full bg-green-600 hover:bg-green-700"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white dark:text-white"
                             onClick={() => handleSubmit('REGISTERED')}
                             disabled={loading}
                         >
                             <Send className="w-4 h-4 mr-2" />
-                            Ro'yxatga olish
+                            {t('letterCreate.register')}
                         </Button>
                         <Button
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:text-white"
                             onClick={() => handleSubmit('DRAFT')}
                             disabled={loading}
                         >
                             <Save className="w-4 h-4 mr-2" />
-                            Qoralamaga saqlash
+                            {t('letterCreate.saveDraft')}
                         </Button>
                         <div className="flex gap-2">
                             <Button
@@ -451,14 +521,14 @@ export function LetterCreate() {
                                 className="flex-1"
                                 onClick={() => blocker.reset!()}
                             >
-                                Bekor qilish
+                                {t('common.cancel')}
                             </Button>
                             <Button
                                 variant="destructive"
                                 className="flex-1"
                                 onClick={() => blocker.proceed!()}
                             >
-                                Saqlamasdan chiqish
+                                {t('common.discard')}
                             </Button>
                         </div>
                     </div>
